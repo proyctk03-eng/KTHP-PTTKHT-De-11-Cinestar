@@ -261,3 +261,12 @@ INSERT INTO `booking_details` (`booking_id`, `showtime_id`, `seat_id`, `seat_cod
 (1, 3, 26, 'C06', 137500.00),
 (2, 3, 37, 'D07', 143750.00);
 
+-- ========================================================
+-- HARDENING BẢO MẬT CƠ SỞ DỮ LIỆU: CẤP QUYỀN TỐI THIỂU (LEAST PRIVILEGE)
+-- User ứng dụng 'ticket_user' chỉ có quyền SELECT, INSERT, UPDATE trên 'ticket_db'
+-- Không có quyền DROP TABLE, ALTER TABLE, hay can thiệp hệ thống máy chủ
+-- ========================================================
+GRANT SELECT, INSERT, UPDATE ON `ticket_db`.* TO 'ticket_user'@'%';
+FLUSH PRIVILEGES;
+
+
