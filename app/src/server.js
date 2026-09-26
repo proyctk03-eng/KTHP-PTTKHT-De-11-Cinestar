@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const dotenv = require('dotenv');
+const session = require('express-session');
 
 // Nạp file cấu hình môi trường .env
 dotenv.config({ path: path.join(__dirname, '../../.env') });
@@ -24,6 +25,24 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Cấu hình Session quản lý phiên đăng nhập
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'cinestar_secret_session_dtc245200452_key_2024',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 24 * 60 * 60 * 1000, // 24 giờ
+        httpOnly: true,
+        secure: false
+    }
+}));
+
+// Middleware toàn cục: Cung cấp thông tin người dùng đang đăng nhập cho tất cả View EJS
+app.use((req, res, next) => {
+    res.locals.currentUser = req.session && req.session.user ? req.session.user : null;
+    next();
+});
+
 // Middleware ghi nhận Metrics cho Prometheus
 app.use(metricsMiddleware);
 
@@ -32,7 +51,8 @@ app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
         const duration = Date.now() - start;
-        const logData = `[HTTP_LOG] ${new Date().toISOString()} | ${req.ip || 'client'} | ${req.method} ${req.originalUrl} | Status=${res.statusCode} | Duration=${duration}ms`;
+        const userTag = req.session && req.session.user ? `[User:${req.session.user.email}]` : '[Guest]';
+        const logData = `[HTTP_LOG] ${new Date().toISOString()} | ${req.ip || 'client'} | ${userTag} | ${req.method} ${req.originalUrl} | Status=${res.statusCode} | Duration=${duration}ms`;
         if (res.statusCode >= 400) {
             console.warn(logData);
         } else {
@@ -73,5 +93,6 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Web Application đang chạy tại: http://localhost:${PORT}`);
     console.log(`📊 Prometheus Metrics endpoint: http://localhost:${PORT}/metrics`);
     console.log(`🩺 Health check endpoint:       http://localhost:${PORT}/health`);
+    console.log(`👑 Admin Portal (Quản lý đăng nhập): http://localhost:${PORT}/admin`);
     console.log('================================================================');
 });

@@ -118,17 +118,17 @@
 
                 <div class="form-group">
                     <label class="form-label" for="cust-name">Họ và tên khách hàng *</label>
-                    <input type="text" id="cust-name" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" required value="Nguyễn Tuấn Đạt">
+                    <input type="text" id="cust-name" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" required value="<%= (typeof currentUser !== 'undefined' && currentUser) ? currentUser.fullname : 'Nguyễn Tuấn Đạt' %>">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="cust-phone">Số điện thoại nhận vé *</label>
-                    <input type="tel" id="cust-phone" class="form-control" placeholder="Ví dụ: 0987654321" required value="0987654321">
+                    <input type="tel" id="cust-phone" class="form-control" placeholder="Ví dụ: 0987654321" required value="<%= (typeof currentUser !== 'undefined' && currentUser) ? currentUser.phone : '0987654321' %>">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="cust-email">Email nhận vé điện tử</label>
-                    <input type="email" id="cust-email" class="form-control" placeholder="tuandat@example.com" value="tuandat.dtc245200452@ictu.edu.vn">
+                    <input type="email" id="cust-email" class="form-control" placeholder="tuandat@example.com" value="<%= (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : 'tuandat.dtc245200452@ictu.edu.vn' %>">
                 </div>
 
                 <div class="form-group" style="margin-top: 1.25rem;">

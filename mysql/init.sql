@@ -8,14 +8,42 @@ CREATE DATABASE IF NOT EXISTS `ticket_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_
 USE `ticket_db`;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS `login_logs`;
 DROP TABLE IF EXISTS `booking_details`;
 DROP TABLE IF EXISTS `bookings`;
+DROP TABLE IF EXISTS `users`;
 DROP TABLE IF EXISTS `seats`;
 DROP TABLE IF EXISTS `showtimes`;
 DROP TABLE IF EXISTS `rooms`;
 DROP TABLE IF EXISTS `movies`;
 DROP TABLE IF EXISTS `categories`;
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- 0. Bảng người dùng (Khách hàng & Quản trị viên)
+CREATE TABLE `users` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `fullname` VARCHAR(150) NOT NULL,
+    `phone` VARCHAR(20) NOT NULL UNIQUE,
+    `email` VARCHAR(150) NOT NULL UNIQUE,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `role` ENUM('USER', 'ADMIN') DEFAULT 'USER',
+    `status` ENUM('ACTIVE', 'BLOCKED') DEFAULT 'ACTIVE',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `last_login` TIMESTAMP NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 0.1 Bảng Quản lý Lịch sử Đăng nhập (Login Audit Log)
+CREATE TABLE `login_logs` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NULL,
+    `email` VARCHAR(150) NOT NULL,
+    `ip_address` VARCHAR(45) NOT NULL,
+    `user_agent` VARCHAR(255) NULL,
+    `status` ENUM('SUCCESS', 'FAILED') DEFAULT 'SUCCESS',
+    `failure_reason` VARCHAR(255) NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_logs_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 1. Bảng danh mục thể loại
 CREATE TABLE `categories` (
@@ -86,6 +114,7 @@ CREATE TABLE `seats` (
 -- 6. Bảng đơn đặt vé
 CREATE TABLE `bookings` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NULL COMMENT 'ID tài khoản nếu người dùng đã đăng nhập',
     `booking_code` VARCHAR(50) NOT NULL UNIQUE COMMENT 'Mã vé TKT-DTC245200452-XXXX',
     `customer_name` VARCHAR(150) NOT NULL,
     `customer_phone` VARCHAR(20) NOT NULL,
@@ -97,6 +126,7 @@ CREATE TABLE `bookings` (
     `payment_status` ENUM('PENDING', 'PAID', 'CANCELLED') DEFAULT 'PAID',
     `transaction_id` VARCHAR(100) NOT NULL,
     `booking_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_bookings_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT `fk_bookings_showtimes` FOREIGN KEY (`showtime_id`) REFERENCES `showtimes` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -118,7 +148,17 @@ CREATE TABLE `booking_details` (
 -- CHÈN DỮ LIỆU MẪU BAN ĐẦU (SEED DATA)
 -- ========================================================
 
--- Thể loại
+-- 0. Tài khoản người dùng (Khách hàng & Quản trị viên)
+INSERT INTO `users` (`id`, `fullname`, `phone`, `email`, `password_hash`, `role`, `status`) VALUES
+(1, 'Ban Quản Trị Hệ Thống (Admin)', '0999999999', 'admin@cinestar.vn', '$2b$10$Q52BQelAwYnQ2KoFdDzZfOFVu2zI4Ju1eGNvcQNQkjWOtVOhqiAQO', 'ADMIN', 'ACTIVE'),
+(2, 'Nguyễn Tuấn Đạt', '0987654321', 'tuandat@ictu.edu.vn', '$2b$10$p47XhL33Cq6ZavdW0/tvY.5KBb/r18XBt/cCfARDDX9x8DqqhGGsC', 'USER', 'ACTIVE');
+
+-- 0.1 Nhật ký đăng nhập mẫu (Login Logs)
+INSERT INTO `login_logs` (`id`, `user_id`, `email`, `ip_address`, `user_agent`, `status`, `created_at`) VALUES
+(1, 1, 'admin@cinestar.vn', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0', 'SUCCESS', NOW()),
+(2, 2, 'tuandat@ictu.edu.vn', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0', 'SUCCESS', NOW());
+
+-- 1. Thể loại
 INSERT INTO `categories` (`id`, `name`, `description`) VALUES
 (1, 'Khoa học viễn tưởng', 'Hành tinh vũ trụ, tương lai, kỹ xảo điện ảnh đỉnh cao'),
 (2, 'Hành động - Bom tấn', 'Chiến đấu mãn nhãn, âm thanh sống động Dolby Atmos'),

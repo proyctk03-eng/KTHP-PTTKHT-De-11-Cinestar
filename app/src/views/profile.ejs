@@ -1,0 +1,90 @@
+<%- include('partials/header') %>
+
+<div style="max-width: 960px; margin: 2rem auto 4rem;">
+    <!-- USER CARD -->
+    <div style="background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-color); padding: 2rem; margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; box-shadow: var(--shadow-card);">
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+            <div style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, #db2777 100%); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #ffffff; font-weight: 800; box-shadow: 0 0 20px var(--primary-glow);">
+                <%= user.fullname.charAt(0).toUpperCase() %>
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <h1 style="font-family: var(--font-heading); font-size: 1.85rem; font-weight: 800; color: #ffffff;">
+                        <%= user.fullname %>
+                    </h1>
+                    <span style="font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px; background: <%= user.role === 'ADMIN' ? 'rgba(229, 9, 20, 0.2)' : 'rgba(16, 185, 129, 0.2)' %>; color: <%= user.role === 'ADMIN' ? 'var(--primary)' : '#34d399' %>; border: 1px solid <%= user.role === 'ADMIN' ? 'var(--primary-glow)' : 'rgba(16, 185, 129, 0.4)' %>;">
+                        <%= user.role %>
+                    </span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">
+                    📧 <%= user.email %> | 📱 <%= user.phone %>
+                </p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <% if (user.role === 'ADMIN') { %>
+                <a href="/admin" class="nav-btn" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
+                    👑 Quản Trị Hệ Thống
+                </a>
+            <% } %>
+            <a href="/logout" class="btn-secondary" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;">
+                🚪 Đăng Xuất
+            </a>
+        </div>
+    </div>
+
+    <!-- MY BOOKINGS -->
+    <div class="section-header">
+        <div>
+            <h2 class="section-title">Vé Đã Đặt Của Tôi</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem;">
+                Danh sách các vé xem phim và sự kiện đã thanh toán thành công của tài khoản này
+            </p>
+        </div>
+        <a href="/" class="nav-btn">🎟️ Đặt Thêm Vé</a>
+    </div>
+
+    <% if (!myBookings || myBookings.length === 0) { %>
+        <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 3rem 1.5rem; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🎫</div>
+            <h3 style="font-family: var(--font-heading); margin-bottom: 0.5rem;">Bạn chưa có vé nào</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                Hãy chọn một bộ phim bom tấn hoặc sự kiện âm nhạc để trải nghiệm ngay hôm nay!
+            </p>
+            <a href="/" class="nav-btn">Khám Phá Phim Chiếu Rạp</a>
+        </div>
+    <% } else { %>
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <% myBookings.forEach(ticket => { %>
+                <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                            <span style="font-family: var(--font-mono); color: var(--gold); font-weight: 700; font-size: 0.95rem;">
+                                <%= ticket.booking_code %>
+                            </span>
+                            <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">
+                                <%= ticket.payment_status %>
+                            </span>
+                        </div>
+                        <h4 style="font-family: var(--font-heading); font-size: 1.25rem; color: #ffffff; margin-bottom: 0.35rem;">
+                            <%= ticket.movie_title %>
+                        </h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">
+                            Suất: <strong style="color: #ffffff;"><%= ticket.formatted_start %></strong> (<%= ticket.formatted_date %>) | <%= ticket.room_name %>
+                        </p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                            Ghế: <strong style="color: #4ade80;"><%= ticket.seat_codes %></strong> | Tổng tiền: <strong style="color: var(--gold);"><%= Number(ticket.total_amount).toLocaleString('vi-VN') %> đ</strong>
+                        </p>
+                    </div>
+                    <div>
+                        <a href="/ticket/<%= ticket.booking_code %>" class="btn-secondary" style="padding: 0.65rem 1.25rem; font-size: 0.9rem;">
+                            🎟️ Xem Vé & Mã QR ➔
+                        </a>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    <% } %>
+</div>
+
+<%- include('partials/footer') %>

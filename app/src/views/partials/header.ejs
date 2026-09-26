@@ -17,11 +17,21 @@
             </a>
             <ul class="nav-links">
                 <li><a href="/" class="nav-item">Trang Chủ</a></li>
-                <li><a href="/?type=MOVIE" class="nav-item">Phim Đang Chiếu</a></li>
-                <li><a href="/?type=EVENT" class="nav-item">Sự Kiện Live</a></li>
+                <li><a href="/?type=MOVIE" class="nav-item">Phim</a></li>
+                <li><a href="/?type=EVENT" class="nav-item">Sự Kiện</a></li>
                 <li><a href="/history" class="nav-item">Tra Cứu Vé</a></li>
-                <li><a href="/health" target="_blank" class="nav-item" style="color: #10b981; font-size: 0.8rem; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.2rem 0.6rem; border-radius: 9999px;">● API Health</a></li>
-                <li><a href="/#movies-section" class="nav-btn">🎟️ Đặt Vé Ngay</a></li>
+                <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+                    <% if (currentUser.role === 'ADMIN') { %>
+                        <li><a href="/admin" class="nav-item" style="color: #f87171; font-weight: 700; background: rgba(239,68,68,0.15); padding: 0.25rem 0.6rem; border-radius: 9999px; border: 1px solid rgba(239,68,68,0.3);">👑 Quản Trị</a></li>
+                    <% } %>
+                    <li><a href="/profile" class="nav-item" style="color: var(--gold); font-weight: 600;">👤 <%= currentUser.fullname.split(' ').slice(-1)[0] %></a></li>
+                    <li><a href="/logout" class="nav-item" style="color: #94a3b8; font-size: 0.85rem;">Đăng Xuất</a></li>
+                <% } else { %>
+                    <li><a href="/login" class="nav-item" style="color: #ffffff; font-weight: 600;">🔐 Đăng Nhập</a></li>
+                    <li><a href="/register" class="nav-item" style="color: var(--gold);">Đăng Ký</a></li>
+                <% } %>
+                <li><a href="/health" target="_blank" class="nav-item" style="color: #10b981; font-size: 0.8rem; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.2rem 0.6rem; border-radius: 9999px;">● API</a></li>
+                <li><a href="/#movies-section" class="nav-btn">🎟️ Đặt Vé</a></li>
             </ul>
         </div>
     </header>

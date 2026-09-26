@@ -79,9 +79,17 @@ docker compose ps
 | :--- | :--- | :---: | :--- |
 | **Website Đặt vé (HTTPS)** | [https://localhost](https://localhost) | `443` | Truy cập chính thức qua Nginx (Bảo mật SSL) |
 | **Website Đặt vé (HTTP)** | [http://localhost](http://localhost) | `80` | Nginx tự động chuyển hướng sang HTTPS |
-| **phpMyAdmin** | [http://localhost:8080](http://localhost:8080) | `8080` | Hoặc qua [https://localhost/pma/](https://localhost/pma/) |
+| **Đăng Nhập Thành Viên** | [http://localhost/login](http://localhost/login) | `80/443` | Có nút điền nhanh 1-click test Admin/User |
+| **Quản Lý Đăng Nhập (Admin)** | [http://localhost/admin](http://localhost/admin) | `80/443` | Bảng Audit Log, quản lý user và vé |
+| **phpMyAdmin** | [http://localhost:8080](http://localhost:8080) | `8080` | Quản trị CSDL trực quan |
 | **Health Check API** | [http://localhost/health](http://localhost/health) | `80/443` | Kiểm tra trạng thái Database & Uptime |
 | **Prometheus Metrics** | [http://localhost/metrics](http://localhost/metrics) | `80/443` | Chuẩn bị sẵn cho Ngày 2 |
+
+### 🔑 Tài khoản mẫu thử nghiệm hệ thống (Có sẵn nút bấm điền nhanh trên giao diện):
+* **Tài khoản Quản Trị (Admin)**: `admin@cinestar.vn` | **Mật khẩu**: `Admin@123456`  
+  *(Đầy đủ quyền truy cập Trang Quản lý Đăng nhập, xem toàn bộ Login Logs, khóa/mở khóa user, phân quyền)*
+* **Tài khoản Khách Hàng (User)**: `tuandat@ictu.edu.vn` | **Mật khẩu**: `Dat@123456`  
+  *(Tự động điền thông tin khi chọn ghế đặt vé, xem hồ sơ cá nhân và vé của tôi)*
 
 ### Thông tin đăng nhập Cơ sở dữ liệu:
 * **Host nội bộ**: `mysql` (hoặc `127.0.0.1` nếu expose)

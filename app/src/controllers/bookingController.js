@@ -86,15 +86,16 @@ async function processBooking(req, res) {
         const selectedPayment = payment_method || 'MOMO';
         const transactionId = `${selectedPayment}_TXN_${Date.now()}`;
 
-        // 5. Lưu vào bảng bookings
+        // 5. Lưu vào bảng bookings (gắn với tài khoản người dùng nếu đã đăng nhập)
+        const loggedUserId = req.session && req.session.user ? req.session.user.id : null;
         const [bookingResult] = await connection.execute(`
             INSERT INTO bookings (
-                booking_code, customer_name, customer_phone, customer_email, 
+                user_id, booking_code, customer_name, customer_phone, customer_email, 
                 showtime_id, total_seats, total_amount, payment_method, 
                 payment_status, transaction_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PAID', ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PAID', ?)
         `, [
-            bookingCode, customer_name, customer_phone, customer_email || '',
+            loggedUserId, bookingCode, customer_name, customer_phone, customer_email || '',
             showtime_id, seat_ids.length, totalAmount, selectedPayment, transactionId
         ]);
 

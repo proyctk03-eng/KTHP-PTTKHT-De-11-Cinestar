@@ -23,6 +23,52 @@ let fallbackMode = false;
 // DỮ LIỆU DỰ PHÒNG IN-MEMORY (KHI CHẠY MÁY KHÁC KHÔNG CÓ MYSQL)
 // ========================================================
 const mockData = {
+    users: [
+        {
+            id: 1,
+            fullname: 'Ban Quản Trị Hệ Thống (Admin)',
+            phone: '0999999999',
+            email: 'admin@cinestar.vn',
+            password_hash: '$2b$10$Q52BQelAwYnQ2KoFdDzZfOFVu2zI4Ju1eGNvcQNQkjWOtVOhqiAQO', // Admin@123456
+            role: 'ADMIN',
+            status: 'ACTIVE',
+            created_at: '2026-09-26 08:00:00',
+            last_login: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        },
+        {
+            id: 2,
+            fullname: 'Nguyễn Tuấn Đạt',
+            phone: '0987654321',
+            email: 'tuandat@ictu.edu.vn',
+            password_hash: '$2b$10$p47XhL33Cq6ZavdW0/tvY.5KBb/r18XBt/cCfARDDX9x8DqqhGGsC', // Dat@123456
+            role: 'USER',
+            status: 'ACTIVE',
+            created_at: '2026-09-26 08:30:00',
+            last_login: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        }
+    ],
+    login_logs: [
+        {
+            id: 1,
+            user_id: 1,
+            email: 'admin@cinestar.vn',
+            ip_address: '127.0.0.1',
+            user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0',
+            status: 'SUCCESS',
+            failure_reason: null,
+            created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        },
+        {
+            id: 2,
+            user_id: 2,
+            email: 'tuandat@ictu.edu.vn',
+            ip_address: '127.0.0.1',
+            user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0',
+            status: 'SUCCESS',
+            failure_reason: null,
+            created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        }
+    ],
     categories: [
         { id: 1, name: 'Khoa học viễn tưởng', description: 'Hành tinh vũ trụ, tương lai, kỹ xảo điện ảnh đỉnh cao' },
         { id: 2, name: 'Hành động - Bom tấn', description: 'Chiến đấu mãn nhãn, âm thanh sống động Dolby Atmos' },
@@ -285,6 +331,126 @@ function handleFallbackQuery(sql, params = []) {
             const sObj = mockData.seats.find(x => x.id === d.seat_id) || {};
             return { ...d, seat_type: sObj.seat_type || 'STANDARD' };
         });
+    }
+
+    // 11. Đăng nhập & Xác thực: Tìm user theo email hoặc phone
+    if (s.includes('FROM USERS') && (s.includes('EMAIL = ?') || s.includes('PHONE = ?'))) {
+        const identifier = params[0];
+        const second = params[1] || identifier;
+        return mockData.users.filter(u => u.email === identifier || u.phone === second);
+    }
+
+    // 12. Tìm user theo id
+    if (s.includes('FROM USERS') && s.includes('WHERE ID = ?')) {
+        const uId = parseInt(params[0], 10);
+        return mockData.users.filter(u => u.id === uId);
+    }
+
+    // 13. Danh sách toàn bộ user (Admin)
+    if (s.includes('FROM USERS') && !s.includes('WHERE')) {
+        return mockData.users;
+    }
+
+    // 14. Thêm user mới (Đăng ký)
+    if (s.startsWith('INSERT INTO USERS')) {
+        const newId = mockData.users.length + 1;
+        const newUser = {
+            id: newId,
+            fullname: params[0],
+            phone: params[1],
+            email: params[2],
+            password_hash: params[3],
+            role: params[4] || 'USER',
+            status: 'ACTIVE',
+            created_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            last_login: null
+        };
+        mockData.users.push(newUser);
+        return { insertId: newId };
+    }
+
+    // 15. Cập nhật user (last_login, status)
+    if (s.startsWith('UPDATE USERS')) {
+        if (s.includes('LAST_LOGIN = NOW()')) {
+            const uId = parseInt(params[0], 10);
+            const user = mockData.users.find(u => u.id === uId);
+            if (user) user.last_login = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            return { affectedRows: 1 };
+        }
+        if (s.includes('STATUS = ?')) {
+            const newStatus = params[0];
+            const uId = parseInt(params[1], 10);
+            const user = mockData.users.find(u => u.id === uId);
+            if (user) user.status = newStatus;
+            return { affectedRows: 1 };
+        }
+        if (s.includes('ROLE = ?')) {
+            const newRole = params[0];
+            const uId = parseInt(params[1], 10);
+            const user = mockData.users.find(u => u.id === uId);
+            if (user) user.role = newRole;
+            return { affectedRows: 1 };
+        }
+    }
+
+    // 16. Ghi nhật ký đăng nhập (Login Logs)
+    if (s.startsWith('INSERT INTO LOGIN_LOGS')) {
+        const logId = mockData.login_logs.length + 1;
+        const newLog = {
+            id: logId,
+            user_id: params[0] || null,
+            email: params[1],
+            ip_address: params[2] || '127.0.0.1',
+            user_agent: params[3] || 'Browser',
+            status: params[4] || 'SUCCESS',
+            failure_reason: params[5] || null,
+            created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        };
+        mockData.login_logs.unshift(newLog);
+        return { insertId: logId };
+    }
+
+    // 17. Quản lý lịch sử đăng nhập (Admin xem Login Logs)
+    if (s.includes('FROM LOGIN_LOGS')) {
+        return mockData.login_logs.slice(0, 50).map(l => {
+            const user = mockData.users.find(u => u.id === l.user_id);
+            return {
+                ...l,
+                fullname: user ? user.fullname : 'Khách vãng lai',
+                role: user ? user.role : 'GUEST',
+                formatted_created_at: l.created_at
+            };
+        });
+    }
+
+    // 18. Lịch sử vé theo user_id
+    if (s.includes('FROM BOOKINGS B') && s.includes('WHERE B.USER_ID = ?')) {
+        const uId = parseInt(params[0], 10);
+        return mockData.bookings.filter(b => b.user_id === uId).map(b => {
+            const st = mockData.showtimes.find(x => x.id === b.showtime_id) || {};
+            const m = mockData.movies.find(x => x.id === st.movie_id) || {};
+            const r = mockData.rooms.find(x => x.id === st.room_id) || {};
+            const seats = mockData.booking_details.filter(d => d.booking_id === b.id).map(d => d.seat_code).join(', ');
+            return {
+                ...b,
+                movie_title: m.title,
+                poster_url: m.poster_url,
+                room_name: r.name,
+                formatted_date: st.show_date,
+                formatted_start: st.start_time ? st.start_time.substring(0, 5) : '19:30',
+                seat_codes: seats
+            };
+        });
+    }
+
+    // 19. Thống kê Admin (COUNT, SUM)
+    if (s.includes('COUNT(*) AS USER_COUNT FROM USERS')) {
+        return [{
+            user_count: mockData.users.length,
+            booking_count: mockData.bookings.length,
+            log_count: mockData.login_logs.length,
+            total_revenue: mockData.bookings.reduce((sum, b) => sum + Number(b.total_amount), 0)
+        }];
     }
 
     return [];

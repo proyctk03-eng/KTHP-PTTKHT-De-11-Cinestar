@@ -1,0 +1,58 @@
+<%- include('partials/header') %>
+
+<div style="max-width: 480px; margin: 3rem auto; background: var(--bg-card); padding: 2.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-card);">
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <span style="font-size: 2.5rem;">✨</span>
+        <h1 style="font-family: var(--font-heading); font-size: 1.85rem; font-weight: 800; color: #ffffff; margin-top: 0.5rem;">
+            Đăng Ký Thành Viên
+        </h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">
+            Tạo tài khoản để nhận ưu đãi vé rạp và quản lý lịch sử đặt vé dễ dàng
+        </p>
+    </div>
+
+    <% if (error) { %>
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 0.85rem 1rem; border-radius: var(--radius-sm); font-size: 0.9rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>⚠️</span>
+            <span><%= error %></span>
+        </div>
+    <% } %>
+
+    <form action="/register" method="POST">
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" for="reg-fullname">Họ và tên *</label>
+            <input type="text" id="reg-fullname" name="fullname" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" for="reg-phone">Số điện thoại *</label>
+            <input type="tel" id="reg-phone" name="phone" class="form-control" placeholder="Ví dụ: 0987654321" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" for="reg-email">Địa chỉ Email *</label>
+            <input type="email" id="reg-email" name="email" class="form-control" placeholder="email@example.com" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" for="reg-password">Mật khẩu (tối thiểu 6 ký tự) *</label>
+            <input type="password" id="reg-password" name="password" class="form-control" placeholder="••••••••" required minlength="6">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label class="form-label" for="reg-confirm">Xác nhận mật khẩu *</label>
+            <input type="password" id="reg-confirm" name="confirm_password" class="form-control" placeholder="••••••••" required minlength="6">
+        </div>
+
+        <button type="submit" class="nav-btn" style="width: 100%; justify-content: center; padding: 0.85rem; font-size: 1rem; border: none; cursor: pointer; margin-bottom: 1.5rem;">
+            🚀 Hoàn Tất Đăng Ký
+        </button>
+    </form>
+
+    <div style="text-align: center; font-size: 0.9rem; color: var(--text-muted);">
+        Đã có tài khoản? 
+        <a href="/login" style="color: var(--gold); font-weight: 600;">Đăng nhập ngay</a>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

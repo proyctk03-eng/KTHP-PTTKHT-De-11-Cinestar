@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const movieController = require('../controllers/movieController');
 const bookingController = require('../controllers/bookingController');
+const authController = require('../controllers/authController');
+const adminController = require('../controllers/adminController');
 const { getMetrics } = require('../controllers/metricsController');
 const db = require('../config/db');
 
@@ -19,6 +21,23 @@ router.get('/ticket/:bookingCode', bookingController.getTicketDetails);
 
 // Trang tra cứu lịch sử vé
 router.get('/history', bookingController.getHistoryPage);
+
+// ==========================================
+// AUTHENTICATION ROUTES (ĐĂNG NHẬP / ĐĂNG KÝ)
+// ==========================================
+router.get('/login', authController.getLoginPage);
+router.post('/login', authController.postLogin);
+router.get('/register', authController.getRegisterPage);
+router.post('/register', authController.postRegister);
+router.get('/logout', authController.logout);
+router.get('/profile', authController.getProfilePage);
+
+// ==========================================
+// ADMIN PORTAL & QUẢN LÝ ĐĂNG NHẬP (RBAC)
+// ==========================================
+router.get('/admin', adminController.requireAdmin, adminController.getAdminDashboard);
+router.post('/admin/users/:id/toggle-status', adminController.requireAdmin, adminController.toggleUserStatus);
+router.post('/admin/users/:id/toggle-role', adminController.requireAdmin, adminController.toggleUserRole);
 
 // Endpoint xuất Metrics cho Prometheus
 router.get('/metrics', getMetrics);

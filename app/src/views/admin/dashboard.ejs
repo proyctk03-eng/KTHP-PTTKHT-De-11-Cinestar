@@ -1,0 +1,288 @@
+<%- include('../partials/header') %>
+
+<div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <h1 style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: #ffffff;">
+                🛡️ Quản Trị Hệ Thống & Quản Lý Đăng Nhập
+            </h1>
+            <span style="background: rgba(229, 9, 20, 0.2); color: var(--primary); border: 1px solid var(--primary-glow); font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px;">
+                ADMIN PORTAL
+            </span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem;">
+            Xin chào Quản trị viên: <strong style="color: #ffffff;"><%= currentUser.fullname %></strong> (<%= currentUser.email %>)
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="/profile" class="btn-secondary">👤 Trang Cá Nhân</a>
+        <a href="/logout" class="btn-secondary" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;">🚪 Đăng Xuất</a>
+    </div>
+</div>
+
+<!-- THÔNG BÁO -->
+<% if (typeof success !== 'undefined' && success) { %>
+    <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 0.85rem 1.25rem; border-radius: var(--radius-sm); font-size: 0.9rem; margin-bottom: 1.5rem;">
+        ✅ <%= success %>
+    </div>
+<% } %>
+
+<% if (typeof error !== 'undefined' && error) { %>
+    <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 0.85rem 1.25rem; border-radius: var(--radius-sm); font-size: 0.9rem; margin-bottom: 1.5rem;">
+        ⚠️ <%= error %>
+    </div>
+<% } %>
+
+<!-- STATS CARDS -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 2.5rem;">
+    <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 1.5rem;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Tổng Người Dùng</div>
+        <div style="font-family: var(--font-heading); font-size: 2.2rem; font-weight: 800; color: #ffffff; margin-top: 0.25rem;">
+            <%= stats.totalUsers %>
+        </div>
+        <div style="font-size: 0.75rem; color: #34d399; margin-top: 0.25rem;">👥 Đã đăng ký thành viên</div>
+    </div>
+
+    <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 1.5rem;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Lượt Đăng Nhập</div>
+        <div style="font-family: var(--font-heading); font-size: 2.2rem; font-weight: 800; color: #60a5fa; margin-top: 0.25rem;">
+            <%= stats.totalLogins %>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">🔐 Có lưu vết Audit Log</div>
+    </div>
+
+    <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 1.5rem;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Vé Đã Bán</div>
+        <div style="font-family: var(--font-heading); font-size: 2.2rem; font-weight: 800; color: var(--gold); margin-top: 0.25rem;">
+            <%= stats.totalBookings %>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">🎟️ Đơn đặt vé thành công</div>
+    </div>
+
+    <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 1.5rem;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Doanh Thu Bán Vé</div>
+        <div style="font-family: var(--font-heading); font-size: 1.85rem; font-weight: 800; color: #4ade80; margin-top: 0.25rem;">
+            <%= Number(stats.totalRevenue).toLocaleString('vi-VN') %> đ
+        </div>
+        <div style="font-size: 0.75rem; color: #34d399; margin-top: 0.25rem;">💰 Thanh toán giả lập</div>
+    </div>
+</div>
+
+<!-- NAVIGATION TABS -->
+<div style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 2rem; overflow-x: auto; padding-bottom: 0.5rem;">
+    <a href="/admin?tab=login_logs" class="btn-secondary" style="<%= activeTab === 'login_logs' ? 'background: var(--primary); border-color: var(--primary); color: #fff;' : '' %> padding: 0.6rem 1.25rem; font-size: 0.9rem;">
+        📋 Quản Lý Lịch Sử Đăng Nhập (<%= loginLogs.length %>)
+    </a>
+    <a href="/admin?tab=users" class="btn-secondary" style="<%= activeTab === 'users' ? 'background: var(--primary); border-color: var(--primary); color: #fff;' : '' %> padding: 0.6rem 1.25rem; font-size: 0.9rem;">
+        👥 Quản Lý Người Dùng (<%= users.length %>)
+    </a>
+    <a href="/admin?tab=bookings" class="btn-secondary" style="<%= activeTab === 'bookings' ? 'background: var(--primary); border-color: var(--primary); color: #fff;' : '' %> padding: 0.6rem 1.25rem; font-size: 0.9rem;">
+        🎟️ Quản Lý Tất Cả Đơn Vé (<%= allBookings.length %>)
+    </a>
+</div>
+
+<!-- ========================================== -->
+<!-- TAB 1: QUẢN LÝ LỊCH SỬ ĐĂNG NHẬP (AUDIT) -->
+<!-- ========================================== -->
+<% if (activeTab === 'login_logs') { %>
+    <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); overflow: hidden; box-shadow: var(--shadow-card);">
+        <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: #ffffff;">
+                Nhật Ký Đăng Nhập Hệ Thống (Login Audit Log)
+            </h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Hiển thị 50 phiên đăng nhập gần nhất</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                <thead>
+                    <tr style="background: rgba(255, 255, 255, 0.04); color: var(--text-sub); border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 0.85rem 1rem;">ID</th>
+                        <th style="padding: 0.85rem 1rem;">Tài Khoản / Email</th>
+                        <th style="padding: 0.85rem 1rem;">Họ Tên</th>
+                        <th style="padding: 0.85rem 1rem;">Vai Trò</th>
+                        <th style="padding: 0.85rem 1rem;">Địa Chỉ IP</th>
+                        <th style="padding: 0.85rem 1rem;">Thời Gian</th>
+                        <th style="padding: 0.85rem 1rem;">Trạng Thái</th>
+                        <th style="padding: 0.85rem 1rem;">Ghi Chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (loginLogs.length === 0) { %>
+                        <tr>
+                            <td colspan="8" style="padding: 2rem; text-align: center; color: var(--text-muted);">Chưa có nhật ký đăng nhập nào.</td>
+                        </tr>
+                    <% } %>
+                    <% loginLogs.forEach(log => { %>
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                            <td style="padding: 0.85rem 1rem; font-family: var(--font-mono); color: var(--text-muted);"><%= log.id %></td>
+                            <td style="padding: 0.85rem 1rem; font-weight: 600; color: #ffffff;"><%= log.email %></td>
+                            <td style="padding: 0.85rem 1rem;"><%= log.fullname %></td>
+                            <td style="padding: 0.85rem 1rem;">
+                                <span style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; background: <%= log.role === 'ADMIN' ? 'rgba(229, 9, 20, 0.2)' : 'rgba(255, 255, 255, 0.08)' %>; color: <%= log.role === 'ADMIN' ? 'var(--primary)' : 'var(--text-sub)' %>;">
+                                    <%= log.role %>
+                                </span>
+                            </td>
+                            <td style="padding: 0.85rem 1rem; font-family: var(--font-mono); font-size: 0.8rem; color: #93c5fd;"><%= log.ip_address %></td>
+                            <td style="padding: 0.85rem 1rem; color: var(--text-muted);"><%= log.formatted_time || log.created_at %></td>
+                            <td style="padding: 0.85rem 1rem;">
+                                <% if (log.status === 'SUCCESS') { %>
+                                    <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                                        ✓ Thành công
+                                    </span>
+                                <% } else { %>
+                                    <span style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                                        ✗ Thất bại
+                                    </span>
+                                <% } %>
+                            </td>
+                            <td style="padding: 0.85rem 1rem; color: var(--text-muted); font-size: 0.8rem;">
+                                <%= log.failure_reason || 'Đăng nhập bình thường' %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<% } %>
+
+<!-- ========================================== -->
+<!-- TAB 2: QUẢN LÝ TÀI KHOẢN NGƯỜI DÙNG -->
+<!-- ========================================== -->
+<% if (activeTab === 'users') { %>
+    <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); overflow: hidden; box-shadow: var(--shadow-card);">
+        <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+            <h3 style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: #ffffff;">
+                Danh Sách Tài Khoản Thành Viên & Quản Trị
+            </h3>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                <thead>
+                    <tr style="background: rgba(255, 255, 255, 0.04); color: var(--text-sub); border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 0.85rem 1rem;">ID</th>
+                        <th style="padding: 0.85rem 1rem;">Họ Tên</th>
+                        <th style="padding: 0.85rem 1rem;">Email</th>
+                        <th style="padding: 0.85rem 1rem;">Số Điện Thoại</th>
+                        <th style="padding: 0.85rem 1rem;">Vai Trò</th>
+                        <th style="padding: 0.85rem 1rem;">Trạng Thái</th>
+                        <th style="padding: 0.85rem 1rem;">Đăng Nhập Cuối</th>
+                        <th style="padding: 0.85rem 1rem; text-align: center;">Hành Động Quản Trị</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% users.forEach(u => { %>
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                            <td style="padding: 0.85rem 1rem; font-family: var(--font-mono); color: var(--text-muted);"><%= u.id %></td>
+                            <td style="padding: 0.85rem 1rem; font-weight: 600; color: #ffffff;"><%= u.fullname %></td>
+                            <td style="padding: 0.85rem 1rem;"><%= u.email %></td>
+                            <td style="padding: 0.85rem 1rem; font-family: var(--font-mono);"><%= u.phone %></td>
+                            <td style="padding: 0.85rem 1rem;">
+                                <span style="font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; background: <%= u.role === 'ADMIN' ? 'rgba(229, 9, 20, 0.2)' : 'rgba(255, 255, 255, 0.08)' %>; color: <%= u.role === 'ADMIN' ? 'var(--primary)' : 'var(--text-sub)' %>;">
+                                    <%= u.role %>
+                                </span>
+                            </td>
+                            <td style="padding: 0.85rem 1rem;">
+                                <% if (u.status === 'ACTIVE') { %>
+                                    <span style="color: #34d399; font-weight: 600;">● Hoạt động</span>
+                                <% } else { %>
+                                    <span style="color: #f87171; font-weight: 600;">● Bị khóa</span>
+                                <% } %>
+                            </td>
+                            <td style="padding: 0.85rem 1rem; color: var(--text-muted); font-size: 0.8rem;">
+                                <%= u.formatted_last_login || u.last_login || 'Chưa đăng nhập' %>
+                            </td>
+                            <td style="padding: 0.85rem 1rem; text-align: center;">
+                                <div style="display: inline-flex; gap: 0.4rem;">
+                                    <% if (u.id !== currentUser.id) { %>
+                                        <!-- Khóa / Mở khóa -->
+                                        <form action="/admin/users/<%= u.id %>/toggle-status" method="POST" style="display: inline;">
+                                            <input type="hidden" name="status" value="<%= u.status === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE' %>">
+                                            <button type="submit" class="btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; cursor: pointer; <%= u.status === 'ACTIVE' ? 'border-color: rgba(239,68,68,0.4); color: #f87171;' : 'border-color: rgba(16,185,129,0.4); color: #34d399;' %>">
+                                                <%= u.status === 'ACTIVE' ? '🔒 Khóa' : '🔓 Mở khóa' %>
+                                            </button>
+                                        </form>
+
+                                        <!-- Đổi vai trò -->
+                                        <form action="/admin/users/<%= u.id %>/toggle-role" method="POST" style="display: inline;">
+                                            <input type="hidden" name="role" value="<%= u.role === 'ADMIN' ? 'USER' : 'ADMIN' %>">
+                                            <button type="submit" class="btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; cursor: pointer;">
+                                                <%= u.role === 'ADMIN' ? 'Hạ quyền User' : 'Thăng Admin' %>
+                                            </button>
+                                        </form>
+                                    <% } else { %>
+                                        <span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">(Tài khoản hiện tại)</span>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<% } %>
+
+<!-- ========================================== -->
+<!-- TAB 3: QUẢN LÝ TẤT CẢ ĐƠN VÉ -->
+<!-- ========================================== -->
+<% if (activeTab === 'bookings') { %>
+    <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); overflow: hidden; box-shadow: var(--shadow-card);">
+        <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+            <h3 style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: #ffffff;">
+                Toàn Bộ Đơn Đặt Vé Trong Hệ Thống
+            </h3>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                <thead>
+                    <tr style="background: rgba(255, 255, 255, 0.04); color: var(--text-sub); border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 0.85rem 1rem;">Mã Vé</th>
+                        <th style="padding: 0.85rem 1rem;">Khách Hàng</th>
+                        <th style="padding: 0.85rem 1rem;">Số Điện Thoại</th>
+                        <th style="padding: 0.85rem 1rem;">Phim & Phòng</th>
+                        <th style="padding: 0.85rem 1rem;">Ghế Đặt</th>
+                        <th style="padding: 0.85rem 1rem;">Tổng Tiền</th>
+                        <th style="padding: 0.85rem 1rem;">Phương Thức</th>
+                        <th style="padding: 0.85rem 1rem;">Thời Gian</th>
+                        <th style="padding: 0.85rem 1rem; text-align: center;">Hành Động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (allBookings.length === 0) { %>
+                        <tr>
+                            <td colspan="9" style="padding: 2rem; text-align: center; color: var(--text-muted);">Chưa có đơn vé nào.</td>
+                        </tr>
+                    <% } %>
+                    <% allBookings.forEach(b => { %>
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                            <td style="padding: 0.85rem 1rem; font-family: var(--font-mono); font-weight: 700; color: var(--gold);"><%= b.booking_code %></td>
+                            <td style="padding: 0.85rem 1rem; font-weight: 600; color: #ffffff;"><%= b.customer_name %></td>
+                            <td style="padding: 0.85rem 1rem; font-family: var(--font-mono);"><%= b.customer_phone %></td>
+                            <td style="padding: 0.85rem 1rem;">
+                                <div><%= b.movie_title %></div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);"><%= b.room_name %></div>
+                            </td>
+                            <td style="padding: 0.85rem 1rem; font-weight: 700; color: #4ade80;"><%= b.seat_codes %></td>
+                            <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--gold);">
+                                <%= Number(b.total_amount).toLocaleString('vi-VN') %> đ
+                            </td>
+                            <td style="padding: 0.85rem 1rem; font-size: 0.8rem;"><%= b.payment_method %></td>
+                            <td style="padding: 0.85rem 1rem; color: var(--text-muted); font-size: 0.8rem;"><%= b.formatted_booking_time || b.booking_time %></td>
+                            <td style="padding: 0.85rem 1rem; text-align: center;">
+                                <a href="/ticket/<%= b.booking_code %>" target="_blank" class="btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                    Xem Vé
+                                </a>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<% } %>
+
+<%- include('../partials/footer') %>
