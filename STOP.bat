@@ -1,26 +1,24 @@
 @echo off
-chcp 65001 >nul
-title 🛑 CINESTAR K23 - DUNG HE THONG
-color 0E
-
-echo ===============================================================================
-echo   🛑 ĐANG DỪNG HỆ THỐNG ĐẶT VÉ XEM PHIM ^& SỰ KIỆN...
-echo ===============================================================================
-echo.
-
+setlocal
+title CINESTAR K23 - DUNG HE THONG
 cd /d "%~dp0"
 
-:: 1. Dừng container Docker nếu đang chạy
-where docker >nul 2>nul
-if %errorlevel% equ 0 (
-    echo Đang dừng và gỡ các container Docker...
+echo ======================================================================
+echo   DANG DUNG HE THONG CINESTAR K23...
+echo ======================================================================
+echo.
+
+where docker >nul 2>&1
+if not errorlevel 1 (
+    echo Dang dung cac container Docker...
     docker compose down
 )
 
-:: 2. Dừng tiến trình Node nếu đang chạy cục bộ
-taskkill /f /im node.exe >nul 2>nul
+echo Dang dung tien trinh Node.js...
+taskkill /f /im node.exe >nul 2>&1
 
 echo.
-echo ✅ ĐÃ DỪNG TOÀN BỘ DỊCH VỤ THÀNH CÔNG!
-echo ===============================================================================
-timeout /t 3 >nul
+echo ======================================================================
+echo   DA DUNG TOAN BO HE THONG THANH CONG!
+echo ======================================================================
+ping 127.0.0.1 -n 3 >nul
