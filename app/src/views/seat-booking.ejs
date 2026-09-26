@@ -1,0 +1,162 @@
+<%- include('partials/header') %>
+
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <a href="/movie/<%= showtime.movie_id %>" style="color: var(--text-muted); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+            ← Đổi suất chiếu khác
+        </a>
+        <h1 style="font-family: var(--font-heading); font-size: 1.85rem; font-weight: 800;">
+            <%= showtime.movie_title %>
+        </h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Phòng: <strong style="color: #ffffff;"><%= showtime.room_name %></strong> | 
+            Ngày: <strong style="color: #ffffff;"><%= showtime.formatted_date %></strong> | 
+            Suất: <strong style="color: var(--gold);"><%= showtime.formatted_start %></strong>
+        </p>
+    </div>
+    <div style="background: rgba(255, 255, 255, 0.05); padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.85rem;">
+        ⚡ Trạng thái: <span style="color: #10b981; font-weight: 700;">Đang kết nối Database</span>
+    </div>
+</div>
+
+<div class="theater-container">
+    <!-- KHU VỰC SƠ ĐỒ GHẾ RẠP CHIẾU -->
+    <div>
+        <!-- MÀN HÌNH CHIẾU -->
+        <div class="screen-wrapper">
+            <div class="screen-curve"></div>
+            <div class="screen-label">MÀN HÌNH CHIẾU CHÍNH (SCREEN)</div>
+        </div>
+
+        <!-- MA TRẬN GHẾ -->
+        <div class="seats-grid">
+            <% Object.keys(seatRows).forEach(rowChar => { %>
+                <div class="seat-row">
+                    <span class="row-label"><%= rowChar %></span>
+                    <% seatRows[rowChar].forEach(seat => { %>
+                        <div 
+                            class="seat <%= seat.seat_type.toLowerCase() %> <%= seat.is_booked ? 'booked' : '' %>"
+                            data-id="<%= seat.id %>"
+                            data-code="<%= seat.seat_code %>"
+                            data-type="<%= seat.seat_type %>"
+                            data-price="<%= seat.final_price %>"
+                            title="<%= seat.seat_code %> (<%= seat.seat_type %>) - <%= Number(seat.final_price).toLocaleString('vi-VN') %> đ <%= seat.is_booked ? '[ĐÃ CÓ NGƯỜI ĐẶT]' : '' %>"
+                        >
+                            <%= seat.seat_number %>
+                        </div>
+                    <% }); %>
+                    <span class="row-label"><%= rowChar %></span>
+                </div>
+            <% }); %>
+        </div>
+
+        <!-- CHÚ THÍCH LOẠI GHẾ -->
+        <div class="seat-legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--seat-std);"></div>
+                <span>Ghế Thường</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--seat-vip);"></div>
+                <span>Ghế VIP (+20.000đ)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--seat-couple); width: 35px;"></div>
+                <span>Ghế Đôi Sweetbox</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--seat-selected);"></div>
+                <span>Ghế Đang Chọn</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--seat-booked); border: 1px dashed rgba(255,255,255,0.2);"></div>
+                <span>Ghế Đã Bán</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHUNG TỔNG HỢP VÉ & THANH TOÁN GIẢ LẬP -->
+    <div>
+        <div class="booking-summary-card">
+            <h3 class="summary-title">Thông Tin Đặt Vé</h3>
+
+            <div class="summary-row">
+                <span>Phim:</span>
+                <span style="max-width: 180px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <%= showtime.movie_title %>
+                </span>
+            </div>
+
+            <div class="summary-row">
+                <span>Suất chiếu:</span>
+                <span><%= showtime.formatted_start %> - <%= showtime.formatted_date %></span>
+            </div>
+
+            <div class="summary-row">
+                <span>Phòng chiếu:</span>
+                <span><%= showtime.room_name %></span>
+            </div>
+
+            <div class="summary-row">
+                <span>Số lượng ghế:</span>
+                <span id="selected-count" style="color: var(--gold); font-size: 1.1rem;">0</span>
+            </div>
+
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">Danh sách ghế chọn:</div>
+            <div id="selected-seats-list" class="selected-seats-badge-list">
+                <span style="color: var(--text-muted); font-size: 0.85rem;">Chưa có ghế nào được chọn</span>
+            </div>
+
+            <div class="total-price-box">
+                <span style="font-size: 0.95rem; font-weight: 600;">Tổng thanh toán:</span>
+                <span id="total-amount" class="total-price-val">0 đ</span>
+            </div>
+
+            <!-- FORM ĐIỀN THÔNG TIN & CHỌN CỔNG THANH TOÁN -->
+            <form id="booking-form" style="margin-top: 1.5rem;">
+                <input type="hidden" id="showtime-id" value="<%= showtime.id %>">
+
+                <div class="form-group">
+                    <label class="form-label" for="cust-name">Họ và tên khách hàng *</label>
+                    <input type="text" id="cust-name" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" required value="Nguyễn Tuấn Đạt">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="cust-phone">Số điện thoại nhận vé *</label>
+                    <input type="tel" id="cust-phone" class="form-control" placeholder="Ví dụ: 0987654321" required value="0987654321">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="cust-email">Email nhận vé điện tử</label>
+                    <input type="email" id="cust-email" class="form-control" placeholder="tuandat@example.com" value="tuandat.dtc245200452@ictu.edu.vn">
+                </div>
+
+                <div class="form-group" style="margin-top: 1.25rem;">
+                    <label class="form-label">Chọn phương thức thanh toán giả lập:</label>
+                    <div class="payment-methods-grid">
+                        <div class="payment-btn active" data-method="MOMO">
+                            <div style="font-size: 1.2rem;">🌸</div>
+                            <div>Ví MoMo</div>
+                        </div>
+                        <div class="payment-btn" data-method="VNPAY">
+                            <div style="font-size: 1.2rem;">💳</div>
+                            <div>VNPAY QR</div>
+                        </div>
+                        <div class="payment-btn" data-method="BANKING">
+                            <div style="font-size: 1.2rem;">🏦</div>
+                            <div>Ngân Hàng</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-submit-booking" class="nav-btn" style="width: 100%; justify-content: center; padding: 0.85rem; font-size: 1rem; border: none; cursor: pointer;">
+                    🚀 Xác Nhận Thanh Toán Vé
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="/js/booking.js"></script>
+
+<%- include('partials/footer') %>

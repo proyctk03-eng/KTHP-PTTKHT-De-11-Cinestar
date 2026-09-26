@@ -1,0 +1,17 @@
+<%- include('partials/header') %>
+
+<div style="max-width: 600px; margin: 4rem auto; text-align: center; background: var(--bg-card); padding: 3rem 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-card);">
+    <div style="font-size: 3.5rem; margin-bottom: 1rem;">⚠️</div>
+    <h1 style="font-family: var(--font-heading); font-size: 1.85rem; margin-bottom: 0.75rem; color: #ffffff;">
+        <%= typeof title !== 'undefined' ? title : 'Đã Xảy Ra Lỗi' %>
+    </h1>
+    <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.6; margin-bottom: 2rem;">
+        <%= typeof message !== 'undefined' ? message : 'Hệ thống không thể xử lý yêu cầu này lúc này.' %>
+    </p>
+    <div style="display: flex; justify-content: center; gap: 1rem;">
+        <a href="/" class="nav-btn">← Quay Về Trang Chủ</a>
+        <a href="/history" class="btn-secondary">Tra Cứu Vé</a>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

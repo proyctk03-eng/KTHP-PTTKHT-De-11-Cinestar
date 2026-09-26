@@ -1,0 +1,99 @@
+<%- include('partials/header') %>
+
+<div style="margin-bottom: 2rem;">
+    <a href="/" style="color: var(--text-muted); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ← Quay lại danh sách phim
+    </a>
+</div>
+
+<div class="theater-container" style="grid-template-columns: 320px 1fr; margin-bottom: 3rem;">
+    <!-- POSTER & QUICK META -->
+    <div>
+        <div style="border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color); box-shadow: var(--shadow-card);">
+            <img src="<%= movie.poster_url %>" alt="<%= movie.title %>" style="width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block;">
+        </div>
+        <div style="margin-top: 1.5rem; background: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.9rem;">
+                <span style="color: var(--text-muted);">Phân loại:</span>
+                <span style="color: var(--gold); font-weight: 700;"><%= movie.rating %></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.9rem;">
+                <span style="color: var(--text-muted);">Thời lượng:</span>
+                <span style="font-weight: 600;"><%= movie.duration %> phút</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.9rem;">
+                <span style="color: var(--text-muted);">Khởi chiếu:</span>
+                <span style="font-weight: 600;"><%= new Date(movie.release_date).toLocaleDateString('vi-VN') %></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                <span style="color: var(--text-muted);">Giá vé gốc:</span>
+                <span style="color: var(--gold); font-weight: 800;"><%= Number(movie.base_price).toLocaleString('vi-VN') %> đ</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOVIE INFO & SHOWTIMES SELECTION -->
+    <div>
+        <span style="color: var(--accent); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px;">
+            <%= movie.category_name %>
+        </span>
+        <h1 style="font-family: var(--font-heading); font-size: 2.4rem; font-weight: 800; margin: 0.5rem 0 1rem; color: #ffffff;">
+            <%= movie.title %>
+        </h1>
+
+        <p style="color: var(--text-sub); font-size: 1rem; line-height: 1.7; margin-bottom: 1.5rem;">
+            <%= movie.description %>
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; background: rgba(255, 255, 255, 0.03); padding: 1.25rem; border-radius: var(--radius-sm); border-left: 3px solid var(--primary);">
+            <div>
+                <span style="display: block; font-size: 0.8rem; color: var(--text-muted);">Đạo diễn:</span>
+                <strong style="font-size: 0.95rem;"><%= movie.director %></strong>
+            </div>
+            <div>
+                <span style="display: block; font-size: 0.8rem; color: var(--text-muted);">Diễn viên:</span>
+                <strong style="font-size: 0.95rem;"><%= movie.cast %></strong>
+            </div>
+        </div>
+
+        <!-- SHOWTIMES -->
+        <h3 style="font-family: var(--font-heading); font-size: 1.4rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+            📅 Lịch Chiếu & Suất Chiếu
+        </h3>
+
+        <% if (showtimes.length === 0) { %>
+            <div style="background: rgba(255, 255, 255, 0.04); padding: 2rem; border-radius: var(--radius-sm); text-align: center; color: var(--text-muted);">
+                Hiện tại chưa có suất chiếu nào mở bán cho phim này. Vui lòng quay lại sau!
+            </div>
+        <% } else { %>
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <% showtimes.forEach(st => { %>
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+                                Ngày: <strong style="color: #ffffff;"><%= st.formatted_date %></strong> | <%= st.room_name %> (<%= st.room_type %>)
+                            </div>
+                            <div style="display: flex; align-items: baseline; gap: 0.75rem;">
+                                <span style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: #ffffff;">
+                                    <%= st.formatted_start %>
+                                </span>
+                                <span style="color: var(--text-muted); font-size: 0.85rem;">~ <%= st.formatted_end %></span>
+                                <% if (Number(st.price_multiplier) > 1.0) { %>
+                                    <span style="background: rgba(245, 197, 24, 0.15); color: var(--gold); border: 1px solid rgba(245, 197, 24, 0.3); font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600;">
+                                        Giờ Vàng x<%= st.price_multiplier %>
+                                    </span>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <a href="/booking/<%= st.id %>" class="nav-btn" style="padding: 0.65rem 1.5rem; font-size: 0.95rem;">
+                            🎟️ Chọn Ghế Suất Này
+                        </a>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

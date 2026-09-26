@@ -1,0 +1,83 @@
+<%- include('partials/header') %>
+
+<div style="max-width: 800px; margin: 0 auto 3rem;">
+    <div class="section-header" style="flex-direction: column; align-items: flex-start;">
+        <h1 class="section-title">Tra Cứu Lịch Sử Đặt Vé</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.4rem;">
+            Nhập số điện thoại đặt vé hoặc mã vé để kiểm tra thông tin và xuất lại vé điện tử
+        </p>
+    </div>
+
+    <!-- SEARCH BOX -->
+    <form action="/history" method="GET" style="display: flex; gap: 0.75rem; margin-bottom: 2rem;">
+        <input 
+            type="text" 
+            name="search" 
+            value="<%= searchKey %>" 
+            placeholder="Nhập số điện thoại (ví dụ: 0987654321) hoặc Mã vé (TKT-...)" 
+            class="form-control" 
+            style="padding: 0.85rem 1.25rem; font-size: 1rem; border-radius: var(--radius-sm);"
+            required
+        >
+        <button type="submit" class="nav-btn" style="border: none; cursor: pointer; padding: 0.85rem 1.75rem; font-size: 1rem; white-space: nowrap;">
+            🔍 Tra Cứu
+        </button>
+    </form>
+
+    <!-- SEARCH RESULTS -->
+    <% if (searchKey) { %>
+        <h3 style="font-family: var(--font-heading); margin-bottom: 1.25rem; font-size: 1.2rem;">
+            Kết quả tra cứu cho "<span style="color: var(--gold);"><%= searchKey %></span>" (<%= tickets.length %> vé tìm thấy)
+        </h3>
+
+        <% if (tickets.length === 0) { %>
+            <div style="background: var(--bg-card); padding: 3rem 1.5rem; border-radius: var(--radius-md); text-align: center; border: 1px solid var(--border-color);">
+                <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    Không tìm thấy vé nào khớp với thông tin bạn cung cấp.
+                </p>
+                <a href="/" class="nav-btn">Đi Tới Đặt Vé Mới</a>
+            </div>
+        <% } else { %>
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <% tickets.forEach(t => { %>
+                    <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                                <span style="font-family: var(--font-mono); color: var(--gold); font-weight: 700; font-size: 0.95rem;">
+                                    <%= t.booking_code %>
+                                </span>
+                                <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">
+                                    <%= t.payment_status %>
+                                </span>
+                            </div>
+                            <h4 style="font-family: var(--font-heading); font-size: 1.25rem; color: #ffffff; margin-bottom: 0.35rem;">
+                                <%= t.movie_title %>
+                            </h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">
+                                Suất: <strong style="color: #ffffff;"><%= t.formatted_start %></strong> (<%= t.formatted_date %>) | <%= t.room_name %>
+                            </p>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                Ghế đã đặt: <strong style="color: #4ade80;"><%= t.seat_codes %></strong> | Tổng: <strong style="color: var(--gold);"><%= Number(t.total_amount).toLocaleString('vi-VN') %> đ</strong>
+                            </p>
+                        </div>
+                        <div>
+                            <a href="/ticket/<%= t.booking_code %>" class="btn-secondary" style="padding: 0.65rem 1.25rem; font-size: 0.9rem;">
+                                🎟️ Xem Vé & QR ➔
+                            </a>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+    <% } else { %>
+        <div style="background: var(--bg-card); padding: 2.5rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🎫</div>
+            <h3 style="font-family: var(--font-heading); margin-bottom: 0.5rem;">Tra Cứu Nhanh Chóng & Tiện Lợi</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 450px; margin: 0 auto;">
+                Bạn có thể thử tra cứu với số điện thoại mẫu đã đặt trong hệ thống: <strong style="color: var(--gold);">0987654321</strong> hoặc <strong style="color: var(--gold);">0912345678</strong>.
+            </p>
+        </div>
+    <% } %>
+</div>
+
+<%- include('partials/footer') %>

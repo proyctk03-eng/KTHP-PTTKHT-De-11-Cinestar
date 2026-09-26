@@ -1,0 +1,137 @@
+# 🎬 HỆ THỐNG ĐẶT VÉ XEM PHIM & SỰ KIỆN TRỰC TUYẾN (CINESTAR K23)
+> **Học phần**: Triển khai và Quản trị Hệ thống Phần mềm  
+> **Trường**: Đại học Công nghệ Thông tin và Truyền thông - Đại học Thái Nguyên (ICTU)  
+> **Đề tài số 11**: Xây dựng & Triển khai Hệ thống Đặt vé Xem phim / Sự kiện  
+> **Sinh viên thực hiện**: **Nguyễn Tuấn Đạt** | **Mã SV**: **DTC245200452** | **Lớp**: K23  
+
+---
+
+## 📌 1. TỔNG QUAN HỆ THỐNG & KIẾN TRÚC TRIỂN KHAI
+
+Hệ thống được phát triển theo kiến trúc **Full-stack hoàn chỉnh** (xử lý nghiệp vụ động, có cơ sở dữ liệu quan hệ, **tuyệt đối không phải web tĩnh**) và được đóng gói triển khai tự động hóa thông qua **Docker Compose**.
+
+```text
+[ Client Browser ]
+        │ (HTTPS: 443 / HTTP: 80)
+        ▼
+┌────────────────────────────────────────────────────────┐
+│               NGINX REVERSE PROXY                      │
+│  - SSL / TLS Termination (HTTPS tự ký)                 │
+│  - Security Headers & Rate Limiting                    │
+└───────────────┬────────────────────────┬───────────────┘
+                │ (frontend_net)         │
+                ▼                        ▼
+┌─────────────────────────────┐   ┌──────────────────────┐
+│  WEB APP (Node.js/Express)  │   │  phpMyAdmin (Admin)  │
+│  - Port 3000                │   │  - Port 80 / 8080    │
+│  - Prometheus /metrics      │   └──────────┬───────────┘
+│  - Non-root Container       │              │
+└───────────────┬─────────────┘              │
+                │ (backend_net)              │
+                └───────────────┬────────────┘
+                                ▼
+                ┌─────────────────────────────┐
+                │   MYSQL 8.0 DATABASE        │
+                │   - Chuẩn 3NF (ACID Trans)  │
+                │   - Tự động nạp init.sql    │
+                │   - Volume: mysql_data      │
+                └─────────────────────────────┘
+```
+
+---
+
+## 🛠️ 2. TECH STACK & CÔNG NGHỆ ÁP DỤNG
+
+* **Backend Logic & Web Server**: Node.js v20 LTS, Express.js, EJS View Engine, `prom-client` (Metrics exporter), `qrcode` (Sinh mã QR vé điện tử).
+* **Cơ sở dữ liệu (Database)**: MySQL 8.0 chuẩn 3NF, hỗ trợ ACID Transaction chống đặt trùng ghế khi nhiều người bấm cùng lúc (`FOR UPDATE`).
+* **Quản trị Database**: phpMyAdmin Web GUI.
+* **Cổng vào & Bảo mật**: Nginx Alpine làm Reverse Proxy, SSL tự ký, Security Headers, Rate Limiting chống DDoS/Spam.
+* **Orchestration**: Docker Compose v2, thiết lập phân tách mạng nội bộ (`frontend_net` & `backend_net`) và giới hạn tài nguyên (CPU/RAM limit).
+
+---
+
+## 🚀 3. HƯỚNG DẪN KHỞI CHẠY (QUICK START)
+
+### Cách 1: Khởi chạy hoàn chỉnh bằng Docker Compose (Khuyến nghị khi nộp bài/demo)
+Chỉ cần thực hiện **01 lệnh duy nhất**:
+```bash
+docker compose up -d --build
+```
+
+Kiểm tra trạng thái các container:
+```bash
+docker compose ps
+```
+
+### Bảng cổng truy cập dịch vụ:
+
+| Dịch vụ | Địa chỉ URL | Cổng Host | Ghi chú |
+| :--- | :--- | :---: | :--- |
+| **Website Đặt vé (HTTPS)** | [https://localhost](https://localhost) | `443` | Truy cập chính thức qua Nginx (Bảo mật SSL) |
+| **Website Đặt vé (HTTP)** | [http://localhost](http://localhost) | `80` | Nginx tự động chuyển hướng sang HTTPS |
+| **phpMyAdmin** | [http://localhost:8080](http://localhost:8080) | `8080` | Hoặc qua [https://localhost/pma/](https://localhost/pma/) |
+| **Health Check API** | [http://localhost/health](http://localhost/health) | `80/443` | Kiểm tra trạng thái Database & Uptime |
+| **Prometheus Metrics** | [http://localhost/metrics](http://localhost/metrics) | `80/443` | Chuẩn bị sẵn cho Ngày 2 |
+
+### Thông tin đăng nhập Cơ sở dữ liệu:
+* **Host nội bộ**: `mysql` (hoặc `127.0.0.1` nếu expose)
+* **Port**: `3306`
+* **Tên Database**: `ticket_db`
+* **User ứng dụng**: `ticket_user` | **Mật khẩu**: `TicketSecurePass2024!`
+* **User quản trị Root**: `root` | **Mật khẩu Root**: `RootSecurePass2024!`
+
+---
+
+### Cách 2: Chạy trực tiếp Node.js khi thử nghiệm lập trình (Standalone Dev)
+```bash
+cd app
+npm install
+npm start
+```
+Truy cập: [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 🎯 4. CÁC TÍNH NĂNG NGHIỆP VỤ THỰC TẾ ĐÃ HOÀN THIỆN (NGÀY 1)
+
+1. **Trang chủ & Lọc Phim**:
+   * Danh mục phim chiếu rạp và sự kiện âm nhạc trực tiếp.
+   * Giao diện hiện đại phong cách Dark Cinema sang trọng, hiển thị giá vé, poster, thể loại, thời lượng.
+2. **Chi tiết Phim & Lịch chiếu**:
+   * Thông tin đạo diễn, diễn viên, tóm tắt nội dung.
+   * Bảng danh sách các suất chiếu trong tuần kèm phòng chiếu (IMAX, Dolby Atmos) và hệ số giá giờ vàng.
+3. **Sơ đồ Chọn Ghế Trực quan (Interactive Seat Map)**:
+   * Mô phỏng màn hình rạp chiếu cong 3D.
+   * Phân loại ghế ngồi rõ ràng: Ghế Thường (Standard), Ghế VIP, Ghế Đôi (Sweetbox).
+   * Khóa ghế tự động khi đã có người đặt trước trong MySQL (hiển thị màu xám, cấm click).
+   * Khách hàng click chọn ghế, hệ thống tự động cộng dồn tổng tiền real-time.
+4. **Thanh toán Giả lập & Đặt vé**:
+   * Hỗ trợ thanh toán qua Ví MoMo, VNPAY QR hoặc Chuyển khoản Ngân hàng.
+   * Cơ chế **ACID Transaction** trong MySQL: Khóa dòng (`FOR UPDATE`) để ngăn chặn tuyệt đối tình trạng 2 khách hàng đặt cùng 1 ghế tại cùng 1 giây.
+5. **Xuất Vé Điện Tử (E-Ticket) & Mã QR Code**:
+   * Sinh mã vé theo định dạng sinh viên: `TKT-DTC24520-XXXX`.
+   * Tự động sinh mã QR Code chứa thông tin vé để quét tại cổng rạp.
+   * Hỗ trợ nút **In vé / Lưu file PDF** trực tiếp từ trình duyệt.
+6. **Tra Cứu Lịch Sử Vé**:
+   * Tìm kiếm vé nhanh qua Số điện thoại hoặc Mã vé.
+
+---
+
+## 🛡️ 5. BIỆN PHÁP HARDENING BẢO MẬT ĐÃ TRIỂN KHAI
+
+* **Non-root Container**: File `Dockerfile` cấu hình chạy dưới user `node` (UID không có quyền root máy chủ).
+* **Docker Network Isolation**: Chia tách `frontend_net` (Nginx <-> App) và `backend_net` (App <-> MySQL), cấm kết nối trực tiếp từ Internet vào CSDL MySQL.
+* **Nginx Security Headers**: Bổ sung đầy đủ `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Strict-Transport-Security`.
+* **Rate Limiting**: Giới hạn tần suất truy cập vào API đặt vé (`/api/bookings`) tối đa 5 req/s để ngăn chặn tool spam đơn ảo.
+* **Tài nguyên giới hạn (Resource Limits)**: Khai báo `deploy.resources.limits` cho từng container chống hiện tượng tràn RAM/CPU gây treo máy.
+
+---
+
+## 📦 6. LỘ TRÌNH 03 COMMIT TRÊN GITHUB THEO YÊU CẦU
+
+* **Commit 1 (Ngày 1)**: `feat: initialize fullstack ticket booking app, mysql, phpmyadmin, and nginx reverse proxy with ssl`
+* **Commit 2 (Ngày 2)**: `feat: integrate prometheus and grafana monitoring stack with cadvisor and database metrics`
+* **Commit 3 (Ngày 3)**: `feat: implement centralized logging with loki, promtail and apply system hardening`
+
+---
+*Bản quyền © 2024 - 2026 Nguyễn Tuấn Đạt (DTC245200452) - ICTU.*

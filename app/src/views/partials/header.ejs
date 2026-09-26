@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= typeof title !== 'undefined' ? title : 'Galaxy Cinema - Đặt Vé Xem Phim & Sự Kiện' %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="/" class="brand-logo">
+                <span class="brand-icon">🎬</span>
+                <span class="brand-text">CINESTAR</span>
+                <span class="brand-badge">K23 ICTU</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/" class="nav-item">Trang Chủ</a></li>
+                <li><a href="/?type=MOVIE" class="nav-item">Phim Đang Chiếu</a></li>
+                <li><a href="/?type=EVENT" class="nav-item">Sự Kiện Live</a></li>
+                <li><a href="/history" class="nav-item">Tra Cứu Vé</a></li>
+                <li><a href="/health" target="_blank" class="nav-item" style="color: #10b981; font-size: 0.8rem; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.2rem 0.6rem; border-radius: 9999px;">● API Health</a></li>
+                <li><a href="/#movies-section" class="nav-btn">🎟️ Đặt Vé Ngay</a></li>
+            </ul>
+        </div>
+    </header>
+    <main class="main-content">

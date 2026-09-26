@@ -1,0 +1,75 @@
+<%- include('partials/header') %>
+
+<!-- HERO BANNER -->
+<section class="hero-banner">
+    <div class="hero-badge">🔥 BOM TẤN ĐANG CHIẾU TOÀN QUỐC</div>
+    <h1 class="hero-title">Dune: Hành Tinh Cát - Phần 2</h1>
+    <p class="hero-desc">
+        Trải nghiệm hình ảnh IMAX Laser siêu thực và âm thanh vòm Dolby Atmos đỉnh cao. Đặt vé trực tuyến ngay hôm nay để nhận vị trí ghế ngồi trung tâm đẹp nhất!
+    </p>
+    <div class="hero-actions">
+        <a href="/movie/1" class="nav-btn" style="font-size: 1rem; padding: 0.75rem 1.75rem;">🎟️ Đặt Vé Suất Chiếu Hôm Nay</a>
+        <a href="#movies-section" class="btn-secondary">Khám Phá Tất Cả Phim</a>
+    </div>
+</section>
+
+<!-- CATEGORY FILTER & MOVIE LIST -->
+<section id="movies-section">
+    <div class="section-header">
+        <div>
+            <h2 class="section-title">Danh Sách Phim & Sự Kiện</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem;">
+                Chọn phim yêu thích để xem lịch chiếu các khung giờ và chọn ghế rạp
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="/" class="btn-secondary" style="<%= activeTab === 'ALL' ? 'background: var(--primary); border-color: var(--primary);' : '' %> font-size: 0.85rem; padding: 0.4rem 1rem;">Tất Cả</a>
+            <a href="/?type=MOVIE" class="btn-secondary" style="<%= activeTab === 'MOVIE' ? 'background: var(--primary); border-color: var(--primary);' : '' %> font-size: 0.85rem; padding: 0.4rem 1rem;">🎬 Phim Chiếu Rạp</a>
+            <a href="/?type=EVENT" class="btn-secondary" style="<%= activeTab === 'EVENT' ? 'background: var(--primary); border-color: var(--primary);' : '' %> font-size: 0.85rem; padding: 0.4rem 1rem;">🎤 Concert & Sự Kiện</a>
+        </div>
+    </div>
+
+    <div class="movie-grid">
+        <% 
+            let filteredMovies = movies;
+            if (activeTab === 'MOVIE') filteredMovies = movies.filter(m => m.type === 'MOVIE');
+            if (activeTab === 'EVENT') filteredMovies = movies.filter(m => m.type === 'EVENT');
+        %>
+
+        <% if (filteredMovies.length === 0) { %>
+            <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; background: var(--bg-card); border-radius: var(--radius-md);">
+                <p style="color: var(--text-muted); font-size: 1.1rem;">Chưa có phim hoặc sự kiện nào trong danh mục này.</p>
+            </div>
+        <% } %>
+
+        <% filteredMovies.forEach(movie => { %>
+            <div class="movie-card">
+                <div class="movie-poster-box">
+                    <img src="<%= movie.poster_url %>" alt="<%= movie.title %>" class="movie-poster" loading="lazy">
+                    <div class="movie-rating-badge"><%= movie.rating %></div>
+                    <div class="movie-type-badge"><%= movie.type === 'EVENT' ? 'Sự Kiện Live' : 'Phim 2D/IMAX' %></div>
+                </div>
+                <div class="movie-info">
+                    <span class="movie-category"><%= movie.category_name %></span>
+                    <h3 class="movie-name"><%= movie.title %></h3>
+                    <div class="movie-meta">
+                        <span>⏱️ <%= movie.duration %> phút</span>
+                        <span>⭐ <%= movie.rating %></span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        <%= movie.description %>
+                    </p>
+                    <div class="movie-price-row">
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Giá chỉ từ</div>
+                            <div class="movie-price"><%= Number(movie.base_price).toLocaleString('vi-VN') %> đ</div>
+                        </div>
+                        <a href="/movie/<%= movie.id %>" class="btn-book">Xem Suất Chiếu ➔</a>
+                    </div>
+                </div>
+            </div>
+        <% }); %>
+    </div>
+</section>
+
+<%- include('partials/footer') %>

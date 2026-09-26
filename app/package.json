@@ -1,0 +1,28 @@
+{
+  "name": "ticket-booking-system",
+  "version": "1.0.0",
+  "description": "He thong Dat ve Xem phim & Su kien - De tai 11 - Nguyen Tuan Dat DTC245200452",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "mysql2": "^3.12.0",
+    "prom-client": "^15.1.3",
+    "qrcode": "^1.5.4"
+  },
+  "keywords": [
+    "ticket-booking",
+    "docker",
+    "prometheus",
+    "grafana",
+    "nginx",
+    "loki"
+  ],
+  "author": "Nguyen Tuan Dat - DTC245200452",
+  "license": "ISC"
+}
