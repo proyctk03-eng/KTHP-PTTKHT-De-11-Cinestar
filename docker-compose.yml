@@ -1,12 +1,16 @@
 # ========================================================
-# DOCKER COMPOSE ORCHESTRATION - DAY 1
+# DOCKER COMPOSE ORCHESTRATION - DAY 2 (FULL STACK)
 # ĐỀ TÀI 11: HỆ THỐNG ĐẶT VÉ XEM PHIM & SỰ KIỆN TRỰC TUYẾN
 # SINH VIÊN: NGUYỄN TUẤN ĐẠT - MSV: DTC245200452
 # MÔN HỌC: TRIỂN KHAI & QUẢN TRỊ HỆ THỐNG PHẦN MỀM K23 - ICTU
 # ========================================================
 
 services:
-  # 1. Web Application (Node.js + Express Full-stack)
+  # ========================================================
+  # 1. APPLICATION & REVERSE PROXY STACK (NGÀY 1)
+  # ========================================================
+
+  # 1.1 Web Application (Node.js + Express Full-stack)
   app:
     build:
       context: ./app
@@ -27,13 +31,14 @@ services:
     networks:
       - frontend_net
       - backend_net
+      - monitoring_net
     deploy:
       resources:
         limits:
           cpus: '0.50'
           memory: 350M
 
-  # 2. Database Server (MySQL 8.0 với chuẩn 3NF và Seed Data)
+  # 1.2 Database Server (MySQL 8.0)
   mysql:
     image: mysql:8.0
     container_name: ticket_mysql
@@ -55,13 +60,14 @@ services:
       start_period: 20s
     networks:
       - backend_net
+      - monitoring_net
     deploy:
       resources:
         limits:
           cpus: '0.75'
           memory: 512M
 
-  # 3. Quản trị Cơ sở dữ liệu giao diện Web (phpMyAdmin)
+  # 1.3 phpMyAdmin Database Web GUI
   phpmyadmin:
     image: phpmyadmin:latest
     container_name: ticket_phpmyadmin
@@ -84,7 +90,7 @@ services:
           cpus: '0.25'
           memory: 256M
 
-  # 4. Nginx Reverse Proxy (HTTPS + SSL + Security Headers)
+  # 1.4 Nginx Reverse Proxy (SSL HTTPS & Security Headers)
   nginx:
     image: nginx:alpine
     container_name: ticket_nginx
@@ -99,19 +105,179 @@ services:
       - app
     networks:
       - frontend_net
+      - monitoring_net
     deploy:
       resources:
         limits:
           cpus: '0.25'
           memory: 128M
 
+  # ========================================================
+  # 2. GIÁM SÁT TOÀN DIỆN (PROMETHEUS & GRAFANA STACK)
+  # ========================================================
+
+  # 2.1 Prometheus Server
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: ticket_prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - frontend_net
+      - monitoring_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 384M
+
+  # 2.2 Grafana Analytics & Dashboards
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: ticket_grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=Admin@123456
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - frontend_net
+      - monitoring_net
+    depends_on:
+      - prometheus
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 384M
+
+  # 2.3 cAdvisor (Giám sát CPU, RAM, Network toàn bộ Container)
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: ticket_cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - monitoring_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.35'
+          memory: 256M
+
+  # 2.4 MySQL Exporter (Cào thông số truy vấn, kết nối MySQL)
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: ticket_mysqld_exporter
+    restart: unless-stopped
+    environment:
+      - DATA_SOURCE_NAME=root:${MYSQL_ROOT_PASSWORD:-RootSecurePass2024!}@(mysql:3306)/
+    networks:
+      - backend_net
+      - monitoring_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: 128M
+
+  # 2.5 Nginx Prometheus Exporter (Cào số lượt kết nối Nginx)
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.1.0
+    container_name: ticket_nginx_exporter
+    restart: unless-stopped
+    command:
+      - -nginx.scrape-uri=http://nginx:80/stub_status
+    networks:
+      - frontend_net
+      - monitoring_net
+    depends_on:
+      - nginx
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: 128M
+
+  # ========================================================
+  # 3. QUẢN LÝ LOG TẬP TRUNG (LOKI + PROMTAIL STACK)
+  # ========================================================
+
+  # 3.1 Loki Log Aggregation Server
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: ticket_loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.40'
+          memory: 384M
+
+  # 3.2 Promtail Log Collector
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: ticket_promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - monitoring_net
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 192M
+
 # ========================================================
-# NETWORK ISOLATION (HARDENING BẢO MẬT)
+# NETWORK ISOLATION & ARCHITECTURE
 # ========================================================
 networks:
   frontend_net:
     driver: bridge
   backend_net:
+    driver: bridge
+  monitoring_net:
     driver: bridge
 
 # ========================================================
@@ -119,4 +285,10 @@ networks:
 # ========================================================
 volumes:
   mysql_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
     driver: local

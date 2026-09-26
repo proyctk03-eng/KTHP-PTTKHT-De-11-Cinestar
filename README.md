@@ -75,15 +75,18 @@ docker compose ps
 
 ### Bảng cổng truy cập dịch vụ:
 
-| Dịch vụ | Địa chỉ URL | Cổng Host | Ghi chú |
-| :--- | :--- | :---: | :--- |
-| **Website Đặt vé (HTTPS)** | [https://localhost](https://localhost) | `443` | Truy cập chính thức qua Nginx (Bảo mật SSL) |
-| **Website Đặt vé (HTTP)** | [http://localhost](http://localhost) | `80` | Nginx tự động chuyển hướng sang HTTPS |
-| **Đăng Nhập Thành Viên** | [http://localhost/login](http://localhost/login) | `80/443` | Có nút điền nhanh 1-click test Admin/User |
-| **Quản Lý Đăng Nhập (Admin)** | [http://localhost/admin](http://localhost/admin) | `80/443` | Bảng Audit Log, quản lý user và vé |
-| **phpMyAdmin** | [http://localhost:8080](http://localhost:8080) | `8080` | Quản trị CSDL trực quan |
-| **Health Check API** | [http://localhost/health](http://localhost/health) | `80/443` | Kiểm tra trạng thái Database & Uptime |
-| **Prometheus Metrics** | [http://localhost/metrics](http://localhost/metrics) | `80/443` | Chuẩn bị sẵn cho Ngày 2 |
+| Dịch vụ | Địa chỉ URL | Cổng Host | Tài khoản mặc định | Ghi chú |
+| :--- | :--- | :---: | :---: | :--- |
+| **Website Đặt vé (HTTPS)** | [https://localhost](https://localhost) | `443` | - | Truy cập chính thức qua Nginx (Bảo mật SSL) |
+| **Website Đặt vé (HTTP)** | [http://localhost](http://localhost) | `80` | - | Nginx tự động chuyển hướng sang HTTPS |
+| **Grafana Dashboard** | [http://localhost:3001](http://localhost:3001) | `3001` | `admin` / `Admin@123456` | Tự động Provisioning Dashboard & Datasource |
+| **Prometheus Server** | [http://localhost:9090](http://localhost:9090) | `9090` | - | Cào số liệu cAdvisor, Nginx, MySQL, App |
+| **Loki Log Engine** | [http://localhost:3100](http://localhost:3100) | `3100` | - | Quản lý log tập trung cho Grafana Explore |
+| **phpMyAdmin** | [http://localhost:8080](http://localhost:8080) | `8080` | `ticket_user` / `TicketSecurePass2024!` | Quản trị CSDL trực quan |
+| **Đăng Nhập Thành Viên** | [http://localhost/login](http://localhost/login) | `80/443` | Xem bên dưới | Có nút điền nhanh 1-click test Admin/User |
+| **Quản Lý Đăng Nhập (Admin)** | [http://localhost/admin](http://localhost/admin) | `80/443` | `admin@cinestar.vn` | Bảng Audit Log, quản lý user và vé |
+| **Health Check API** | [http://localhost/health](http://localhost/health) | `80/443` | - | Kiểm tra trạng thái Database & Uptime |
+| **Prometheus Metrics** | [http://localhost/metrics](http://localhost/metrics) | `80/443` | - | Endpoint đo lường NodeJS & Business KPIs |
 
 ### 🔑 Tài khoản mẫu thử nghiệm hệ thống (Có sẵn nút bấm điền nhanh trên giao diện):
 * **Tài khoản Quản Trị (Admin)**: `admin@cinestar.vn` | **Mật khẩu**: `Admin@123456`  
@@ -91,22 +94,23 @@ docker compose ps
 * **Tài khoản Khách Hàng (User)**: `tuandat@ictu.edu.vn` | **Mật khẩu**: `Dat@123456`  
   *(Tự động điền thông tin khi chọn ghế đặt vé, xem hồ sơ cá nhân và vé của tôi)*
 
-### Thông tin đăng nhập Cơ sở dữ liệu:
-* **Host nội bộ**: `mysql` (hoặc `127.0.0.1` nếu expose)
-* **Port**: `3306`
-* **Tên Database**: `ticket_db`
-* **User ứng dụng**: `ticket_user` | **Mật khẩu**: `TicketSecurePass2024!`
-* **User quản trị Root**: `root` | **Mật khẩu Root**: `RootSecurePass2024!`
-
 ---
 
-### Cách 2: Chạy trực tiếp Node.js khi thử nghiệm lập trình (Standalone Dev)
-```bash
-cd app
-npm install
-npm start
-```
-Truy cập: [http://localhost:3000](http://localhost:3000)
+## 📑 4. CÁC CÂU TRUY VẤN LOGQL THỰC HÀNH (TIÊU CHÍ 5)
+Trong Grafana Explore ([http://localhost:3001/explore](http://localhost:3001/explore)), chọn Datasource **Loki** và sử dụng các câu query sau:
+1. **Query 1 - Truy vấn toàn bộ log của ứng dụng web đặt vé**:
+   ```logql
+   {container="ticket-app"}
+   ```
+2. **Query 2 - Lọc riêng các sự kiện đặt vé thành công (Audit log nghiệp vụ)**:
+   ```logql
+   {container="ticket-app"} |= "BOOKING_SUCCESS"
+   ```
+3. **Query 3 - Giám sát các mã lỗi HTTP 4xx hoặc 5xx trên Nginx**:
+   ```logql
+   {container="nginx"} |~ " (4[0-9]{2}|5[0-9]{2}) "
+   ```
+*(Xem thêm hướng dẫn chi tiết tại [queries/logql_queries.md](queries/logql_queries.md))*
 
 ---
 

@@ -33,12 +33,15 @@ echo.
 echo [2/2] Dang tu dong mo trinh duyet web...
 ping 127.0.0.1 -n 4 >nul
 start http://localhost
+start http://localhost:3001
 start http://localhost:8080
 echo.
 echo ======================================================================
 echo   He thong da san sang hoat dong!
-echo   Website:    http://localhost  (hoac https://localhost)
-echo   phpMyAdmin: http://localhost:8080
+echo   Website Dat Ve:      http://localhost  (hoac https://localhost)
+echo   Grafana Dashboard:   http://localhost:3001  (User: admin / Admin@123456)
+echo   Prometheus UI:       http://localhost:9090
+echo   phpMyAdmin Database: http://localhost:8080
 echo ======================================================================
 echo.
 pause
