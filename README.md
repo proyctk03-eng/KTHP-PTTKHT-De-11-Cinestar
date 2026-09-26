@@ -52,7 +52,17 @@ Hệ thống được phát triển theo kiến trúc **Full-stack hoàn chỉnh
 
 ## 🚀 3. HƯỚNG DẪN KHỞI CHẠY (QUICK START)
 
-### Cách 1: Khởi chạy hoàn chỉnh bằng Docker Compose (Khuyến nghị khi nộp bài/demo)
+### 🌟 Cách 1: KHỞI ĐỘNG 1 CHẠM TỰ ĐỘNG (DỄ NHẤT TRÊN MÁY KHÁC)
+Bạn chỉ cần mang toàn bộ thư mục sang máy khác và:
+* **Nhấp đúp chuột vào file `RUN.bat`**:
+  * Tự động phát hiện môi trường:
+    * Nếu máy có Docker: Tự chạy Docker Compose, bật toàn bộ dịch vụ và **tự động mở trình duyệt web**.
+    * Nếu máy chưa cài Docker: Tự động chạy chế độ Dual-Engine In-Memory siêu nhẹ và **tự động mở trình duyệt web** tại `http://localhost:3000`.
+* **Để dừng hệ thống**: Nhấp đúp chuột vào file `STOP.bat`.
+
+---
+
+### Cách 2: Khởi chạy thủ công qua dòng lệnh Docker Compose
 Chỉ cần thực hiện **01 lệnh duy nhất**:
 ```bash
 docker compose up -d --build
