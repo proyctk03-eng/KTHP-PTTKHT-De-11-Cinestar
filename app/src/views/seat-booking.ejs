@@ -15,7 +15,7 @@
         </p>
     </div>
     <div style="background: rgba(255, 255, 255, 0.05); padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.85rem;">
-        ⚡ Trạng thái: <span style="color: #10b981; font-weight: 700;">Đang kết nối Database</span>
+        👤 Tài khoản: <strong style="color: var(--gold);"><%= (typeof currentUser !== 'undefined' && currentUser) ? currentUser.fullname : 'Khách Hàng' %></strong>
     </div>
 </div>
 
@@ -118,17 +118,17 @@
 
                 <div class="form-group">
                     <label class="form-label" for="cust-name">Họ và tên khách hàng *</label>
-                    <input type="text" id="cust-name" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" required value="<%= (typeof currentUser !== 'undefined' && currentUser) ? currentUser.fullname : 'Nguyễn Tuấn Đạt' %>">
+                    <input type="text" id="cust-name" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" required value="<%= (typeof currentUser !== 'undefined' && currentUser) ? currentUser.fullname : '' %>">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="cust-phone">Số điện thoại nhận vé *</label>
-                    <input type="tel" id="cust-phone" class="form-control" placeholder="Ví dụ: 0987654321" required value="<%= (typeof currentUser !== 'undefined' && currentUser) ? currentUser.phone : '0987654321' %>">
+                    <input type="tel" id="cust-phone" class="form-control" placeholder="Ví dụ: 0987654321" required value="<%= (typeof currentUser !== 'undefined' && currentUser) ? currentUser.phone : '' %>">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="cust-email">Email nhận vé điện tử</label>
-                    <input type="email" id="cust-email" class="form-control" placeholder="tuandat@example.com" value="<%= (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : 'tuandat.dtc245200452@ictu.edu.vn' %>">
+                    <input type="email" id="cust-email" class="form-control" placeholder="email@example.com" value="<%= (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : '' %>">
                 </div>
 
                 <div class="form-group" style="margin-top: 1.25rem;">

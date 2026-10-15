@@ -787,6 +787,18 @@ a {
     }
 }
 
+.footer-container a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease, transform 0.2s ease;
+    display: inline-block;
+}
+
+.footer-container a:hover {
+    color: #ffffff;
+    transform: translateX(3px);
+}
+
 .footer-copy {
     text-align: center;
     padding-top: 1.5rem;

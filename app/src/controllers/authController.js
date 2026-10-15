@@ -1,6 +1,58 @@
 const bcrypt = require('bcryptjs');
 const db = require('../config/db');
 
+// ========================================================
+// CƠ CHẾ BẢO MẬT: CHỐNG BRUTE-FORCE & KHÓA TẠM THỜI
+// Quy định: Đăng nhập sai 5 lần liên tiếp -> Bị khóa 3 phút (180 giây)
+// ========================================================
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 3 * 60 * 1000; // 3 phút = 180.000 ms
+
+// Map lưu trữ bộ nhớ đệm: key (identifier) -> { count, lockedUntil, firstFailedAt }
+const loginLockouts = new Map();
+
+function getLockoutRecord(key) {
+    const record = loginLockouts.get(key);
+    if (!record) return null;
+    const now = Date.now();
+    // Nếu đã hết thời gian khóa 3 phút -> tự động mở khóa và xóa bộ đếm
+    if (record.lockedUntil && record.lockedUntil <= now) {
+        loginLockouts.delete(key);
+        return null;
+    }
+    return record;
+}
+
+function recordFailedAttempt(key) {
+    const now = Date.now();
+    let record = loginLockouts.get(key);
+    if (!record || (record.lockedUntil && record.lockedUntil <= now)) {
+        record = { count: 1, lockedUntil: null, firstFailedAt: now };
+    } else {
+        record.count += 1;
+    }
+
+    if (record.count >= MAX_FAILED_ATTEMPTS) {
+        record.lockedUntil = now + LOCKOUT_DURATION_MS;
+    }
+    loginLockouts.set(key, record);
+    return record;
+}
+
+function clearFailedAttempts(key) {
+    loginLockouts.delete(key);
+}
+
+// Middleware bắt buộc đăng nhập (Dùng cho các chức năng nhạy cảm như Đặt vé, Xem profile)
+function requireAuth(req, res, next) {
+    if (!req.session || !req.session.user) {
+        const returnUrl = encodeURIComponent(req.originalUrl || '/');
+        const errorMsg = encodeURIComponent('Vui lòng đăng nhập tài khoản để tiếp tục đặt vé và chọn ghế.');
+        return res.redirect(`/login?returnUrl=${returnUrl}&error=${errorMsg}`);
+    }
+    next();
+}
+
 // Trang Đăng Nhập
 function getLoginPage(req, res) {
     if (req.session && req.session.user) {
@@ -29,8 +81,31 @@ async function postLogin(req, res) {
         });
     }
 
+    const identifier = email_or_phone.trim().toLowerCase();
+
+    // 0. KIỂM TRA TRẠNG THÁI KHÓA TẠM THỜI (BRUTE-FORCE LOCKOUT)
+    const lockout = getLockoutRecord(identifier);
+    const now = Date.now();
+    if (lockout && lockout.lockedUntil && lockout.lockedUntil > now) {
+        const remainingSeconds = Math.ceil((lockout.lockedUntil - now) / 1000);
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        const timeDisplay = minutes > 0 ? `${minutes} phút ${seconds} giây` : `${seconds} giây`;
+
+        await db.query(
+            'INSERT INTO login_logs (user_id, email, ip_address, user_agent, status, failure_reason) VALUES (?, ?, ?, ?, ?, ?)',
+            [null, identifier, ipAddress, userAgent, 'FAILED', `Tài khoản đang bị tạm khóa 3 phút (còn lại: ${timeDisplay})`]
+        );
+
+        return res.render('login', {
+            title: 'Đăng Nhập - CINESTAR K23',
+            error: `🚫 Bạn đã nhập sai mật khẩu quá 5 lần. Tài khoản tạm thời bị khóa trong 3 phút để bảo vệ an toàn. Vui lòng thử lại sau: ${timeDisplay}.`,
+            success: null,
+            returnUrl
+        });
+    }
+
     try {
-        const identifier = email_or_phone.trim();
         const users = await db.query(
             'SELECT * FROM users WHERE email = ? OR phone = ? LIMIT 1',
             [identifier, identifier]
@@ -38,13 +113,25 @@ async function postLogin(req, res) {
 
         // 1. Kiểm tra tài khoản tồn tại
         if (!users || users.length === 0) {
+            const failRecord = recordFailedAttempt(identifier);
+            let errorMsg = 'Email hoặc Số điện thoại không chính xác.';
+            let failureReason = `Tài khoản không tồn tại (thất bại lần ${failRecord.count}/${MAX_FAILED_ATTEMPTS})`;
+
+            if (failRecord.lockedUntil) {
+                errorMsg = '🚫 Bạn đã thử đăng nhập thất bại 5 lần liên tiếp! Tài khoản đã bị tạm khóa trong vòng 3 phút để bảo vệ an toàn.';
+                failureReason = 'Sai thông tin 5 lần -> Tự động khóa 3 phút';
+            } else {
+                const remaining = MAX_FAILED_ATTEMPTS - failRecord.count;
+                errorMsg += ` Bạn còn ${remaining} lần thử trước khi tài khoản bị khóa 3 phút.`;
+            }
+
             await db.query(
                 'INSERT INTO login_logs (user_id, email, ip_address, user_agent, status, failure_reason) VALUES (?, ?, ?, ?, ?, ?)',
-                [null, identifier, ipAddress, userAgent, 'FAILED', 'Tài khoản không tồn tại trên hệ thống']
+                [null, identifier, ipAddress, userAgent, 'FAILED', failureReason]
             );
             return res.render('login', {
                 title: 'Đăng Nhập - CINESTAR K23',
-                error: 'Email hoặc Số điện thoại không chính xác.',
+                error: errorMsg,
                 success: null,
                 returnUrl
             });
@@ -69,19 +156,33 @@ async function postLogin(req, res) {
         // 3. So khớp mật khẩu đã băm (Bcrypt)
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) {
+            const failRecord = recordFailedAttempt(identifier);
+            let errorMsg = 'Mật khẩu không chính xác.';
+            let failureReason = `Sai mật khẩu đăng nhập (lần ${failRecord.count}/${MAX_FAILED_ATTEMPTS})`;
+
+            if (failRecord.lockedUntil) {
+                errorMsg = '🚫 Bạn đã nhập sai mật khẩu 5 lần liên tiếp! Tài khoản đã bị tạm khóa trong vòng 3 phút để chống tấn công brute-force. Vui lòng thử lại sau 3 phút.';
+                failureReason = 'Sai mật khẩu lần 5/5 -> Tự động khóa 3 phút';
+            } else {
+                const remaining = MAX_FAILED_ATTEMPTS - failRecord.count;
+                errorMsg += ` Bạn còn ${remaining} lần thử trước khi tài khoản bị khóa 3 phút.`;
+            }
+
             await db.query(
                 'INSERT INTO login_logs (user_id, email, ip_address, user_agent, status, failure_reason) VALUES (?, ?, ?, ?, ?, ?)',
-                [user.id, user.email, ipAddress, userAgent, 'FAILED', 'Sai mật khẩu đăng nhập']
+                [user.id, user.email, ipAddress, userAgent, 'FAILED', failureReason]
             );
             return res.render('login', {
                 title: 'Đăng Nhập - CINESTAR K23',
-                error: 'Mật khẩu không chính xác. Vui lòng thử lại.',
+                error: errorMsg,
                 success: null,
                 returnUrl
             });
         }
 
-        // 4. Đăng nhập thành công -> Ghi nhật ký thành công & Cập nhật last_login
+        // 4. Đăng nhập thành công -> Xóa bộ đếm thất bại & Ghi nhật ký thành công
+        clearFailedAttempts(identifier);
+
         await db.query(
             'INSERT INTO login_logs (user_id, email, ip_address, user_agent, status, failure_reason) VALUES (?, ?, ?, ?, ?, ?)',
             [user.id, user.email, ipAddress, userAgent, 'SUCCESS', null]
@@ -226,6 +327,7 @@ async function getProfilePage(req, res) {
 }
 
 module.exports = {
+    requireAuth,
     getLoginPage,
     postLogin,
     getRegisterPage,

@@ -120,6 +120,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Chuyển hướng sang trang vé điện tử
                     window.location.href = data.redirect_url;
                 } else {
+                    // Bắt lỗi chưa đăng nhập
+                    if (response.status === 401 || data.require_login) {
+                        alert('⚠️ ' + (data.message || 'Vui lòng đăng nhập tài khoản trước khi đặt vé!'));
+                        window.location.href = '/login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                        return;
+                    }
+
                     alert('Lỗi: ' + data.message);
                     bookBtn.disabled = false;
                     bookBtn.innerHTML = originalBtnText;

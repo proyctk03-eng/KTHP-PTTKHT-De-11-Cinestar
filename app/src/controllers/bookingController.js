@@ -4,6 +4,15 @@ const { ticketBookingsTotal, ticketRevenueTotal } = require('./metricsController
 
 // Xử lý Đặt vé & Thanh toán giả lập (ACID Transaction)
 async function processBooking(req, res) {
+    // 0. BẮT BUỘC ĐĂNG NHẬP TRƯỚC KHI ĐẶT VÉ
+    if (!req.session || !req.session.user) {
+        return res.status(401).json({ 
+            success: false, 
+            require_login: true,
+            message: 'Vui lòng đăng nhập tài khoản trước khi thực hiện chọn ghế và thanh toán vé.' 
+        });
+    }
+
     const { 
         showtime_id, 
         customer_name, 

@@ -13,8 +13,8 @@ router.get('/', movieController.getHomePage);
 // Chi tiết phim & suất chiếu
 router.get('/movie/:id', movieController.getMovieDetail);
 
-// Sơ đồ chọn ghế cho suất chiếu
-router.get('/booking/:showtimeId', movieController.getShowtimeSeatMap);
+// Sơ đồ chọn ghế cho suất chiếu (Bắt buộc đăng nhập tài khoản trước khi chọn ghế)
+router.get('/booking/:showtimeId', authController.requireAuth, movieController.getShowtimeSeatMap);
 
 // Trang xem vé điện tử sau khi thanh toán
 router.get('/ticket/:bookingCode', bookingController.getTicketDetails);
