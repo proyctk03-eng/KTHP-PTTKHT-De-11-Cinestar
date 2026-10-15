@@ -68,7 +68,7 @@ async function getMovieDetail(req, res) {
         console.error('[MOVIE CONTROLLER] Lỗi getMovieDetail:', err);
         res.status(500).render('error', { 
             title: 'Lỗi Truy Vấn', 
-            message: err.message 
+            message: 'Đã xảy ra lỗi khi tải thông tin chi tiết phim. Vui lòng thử lại sau.' 
         });
     }
 }
@@ -138,7 +138,7 @@ async function getShowtimeSeatMap(req, res) {
         console.error('[MOVIE CONTROLLER] Lỗi getShowtimeSeatMap:', err);
         res.status(500).render('error', { 
             title: 'Lỗi Tải Sơ Đồ Ghế', 
-            message: err.message 
+            message: 'Đã xảy ra lỗi khi tải sơ đồ ghế của suất chiếu. Vui lòng thử lại sau.' 
         });
     }
 }

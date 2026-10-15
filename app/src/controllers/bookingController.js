@@ -1,6 +1,19 @@
+const crypto = require('crypto');
 const db = require('../config/db');
 const QRCode = require('qrcode');
 const { ticketBookingsTotal, ticketRevenueTotal } = require('./metricsController');
+
+// Helper làm sạch dữ liệu đầu vào chống Stored XSS (CWE-79)
+function sanitizeInput(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.replace(/<[^>]*>?/gm, '').trim();
+}
+
+// Sinh mã vé độc nhất an toàn (Cryptographically Secure Random - Chống IDOR CWE-330/384)
+function generateTicketCode() {
+    const secureToken = crypto.randomBytes(4).toString('hex').toUpperCase();
+    return `TKT-DTC24520-${secureToken}`;
+}
 
 // Xử lý Đặt vé & Thanh toán giả lập (ACID Transaction)
 async function processBooking(req, res) {
@@ -22,11 +35,23 @@ async function processBooking(req, res) {
         payment_method 
     } = req.body;
 
+    const cleanName = sanitizeInput(customer_name);
+    const cleanPhone = sanitizeInput(customer_phone);
+    const cleanEmail = sanitizeInput(customer_email);
+
     // Validate input
-    if (!showtime_id || !customer_name || !customer_phone || !seat_ids || !Array.isArray(seat_ids) || seat_ids.length === 0) {
+    if (!showtime_id || !cleanName || !cleanPhone || !seat_ids || !Array.isArray(seat_ids) || seat_ids.length === 0) {
         return res.status(400).json({ 
             success: false, 
             message: 'Thông tin đặt vé không hợp lệ. Vui lòng chọn ít nhất 1 ghế và điền đầy đủ thông tin.' 
+        });
+    }
+
+    const phoneRegex = /^(03|05|07|08|09)\d{8}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Số điện thoại nhận vé không hợp lệ. Vui lòng nhập số điện thoại di động Việt Nam 10 chữ số.' 
         });
     }
 
@@ -89,11 +114,11 @@ async function processBooking(req, res) {
             });
         }
 
-        // 4. Sinh mã vé độc nhất theo Mã SV: TKT-DTC245200452-XXXX
-        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-        const bookingCode = `TKT-DTC24520-${randomSuffix}`;
-        const selectedPayment = payment_method || 'MOMO';
-        const transactionId = `${selectedPayment}_TXN_${Date.now()}`;
+        // 4. Sinh mã vé độc nhất an toàn (Cryptographically Secure Random - Chống IDOR CWE-330/384)
+        const bookingCode = generateTicketCode();
+        const allowedPayments = ['MOMO', 'VNPAY', 'BANKING'];
+        const selectedPayment = allowedPayments.includes(payment_method) ? payment_method : 'MOMO';
+        const transactionId = `${selectedPayment}_TXN_${Date.now()}_${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
         // 5. Lưu vào bảng bookings (gắn với tài khoản người dùng nếu đã đăng nhập)
         const loggedUserId = req.session && req.session.user ? req.session.user.id : null;
@@ -104,7 +129,7 @@ async function processBooking(req, res) {
                 payment_status, transaction_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PAID', ?)
         `, [
-            loggedUserId, bookingCode, customer_name, customer_phone, customer_email || '',
+            loggedUserId, bookingCode, cleanName, cleanPhone, cleanEmail || '',
             showtime_id, seat_ids.length, totalAmount, selectedPayment, transactionId
         ]);
 
@@ -126,7 +151,7 @@ async function processBooking(req, res) {
         ticketRevenueTotal.inc(totalAmount);
 
         // 8. Xuất Log có cấu trúc chuẩn cho Loki / Promtail thu thập
-        console.log(`[BOOKING_SUCCESS] Mã vé=${bookingCode} | Khách hàng=${customer_name} | ĐT=${customer_phone} | Phim=${showtime.movie_title} | Ghế=${bookingDetailItems.map(d=>d.seat_code).join(',')} | Tổng tiền=${totalAmount.toLocaleString('vi-VN')} VND | Phương thức=${selectedPayment} | TxID=${transactionId}`);
+        console.log(`[BOOKING_SUCCESS] Mã vé=${bookingCode} | Khách hàng=${cleanName} | ĐT=${cleanPhone} | Phim=${showtime.movie_title} | Ghế=${bookingDetailItems.map(d=>d.seat_code).join(',')} | Tổng tiền=${totalAmount.toLocaleString('vi-VN')} VND | Phương thức=${selectedPayment} | TxID=${transactionId}`);
 
         return res.json({
             success: true,
@@ -142,7 +167,7 @@ async function processBooking(req, res) {
         console.error('[BOOKING_ERROR] Lỗi khi xử lý đặt vé:', err);
         return res.status(500).json({ 
             success: false, 
-            message: 'Lỗi hệ thống khi xử lý thanh toán: ' + err.message 
+            message: 'Đã xảy ra lỗi máy chủ trong quá trình xử lý thanh toán. Vui lòng thử lại sau.' 
         });
     } finally {
         if (connection) connection.release();
@@ -205,16 +230,17 @@ async function getTicketDetails(req, res) {
 
     } catch (err) {
         console.error('[BOOKING CONTROLLER] Lỗi getTicketDetails:', err);
-        res.status(500).render('error', { title: 'Lỗi tải vé', message: err.message });
+        res.status(500).render('error', { title: 'Lỗi tải vé', message: 'Không thể tải thông tin vé lúc này. Vui lòng thử lại sau.' });
     }
 }
 
 // Tra cứu lịch sử đặt vé qua Số điện thoại hoặc Mã vé
 async function getHistoryPage(req, res) {
-    const searchKey = req.query.search || '';
+    const rawSearch = req.query.search || '';
+    const searchKey = rawSearch.replace(/<[^>]*>?/gm, '').trim();
     let tickets = [];
 
-    if (searchKey.trim()) {
+    if (searchKey) {
         try {
             tickets = await db.query(`
                 SELECT b.*, 
@@ -247,5 +273,7 @@ async function getHistoryPage(req, res) {
 module.exports = {
     processBooking,
     getTicketDetails,
-    getHistoryPage
+    getHistoryPage,
+    generateTicketCode,
+    sanitizeInput
 };

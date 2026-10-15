@@ -16,6 +16,9 @@ const db = require('./config/db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// BẢO MẬT: Tin cậy Nginx Reverse Proxy (Trust Proxy 1 hop)
+app.set('trust proxy', 1);
+
 // Cấu hình View Engine EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -24,18 +27,20 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Parse JSON & URL-encoded Form data
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-// Cấu hình Session quản lý phiên đăng nhập
+// Cấu hình Session quản lý phiên đăng nhập (Hardened Security)
 app.use(session({
     secret: process.env.SESSION_SECRET || 'cinestar_secret_session_dtc245200452_key_2024',
+    name: 'cinestar_k23_sid', // Ẩn định danh mặc định connect.sid để chống Fingerprinting
     resave: false,
     saveUninitialized: false,
     cookie: {
         maxAge: 24 * 60 * 60 * 1000, // 24 giờ
-        httpOnly: true,
-        secure: false
+        httpOnly: true, // Chống trích xuất Cookie qua XSS
+        sameSite: 'lax', // Phòng vệ tấn công CSRF
+        secure: false // Hoạt động tương thích cả HTTP & Reverse Proxy SSL
     }
 }));
 

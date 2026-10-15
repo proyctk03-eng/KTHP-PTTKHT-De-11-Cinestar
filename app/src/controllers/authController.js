@@ -43,10 +43,28 @@ function clearFailedAttempts(key) {
     loginLockouts.delete(key);
 }
 
+// ========================================================
+// BẢO MẬT NÂNG CAO: CHỐNG OPEN REDIRECT (CWE-601) & XSS (CWE-79)
+// ========================================================
+function sanitizeReturnUrl(url) {
+    if (!url || typeof url !== 'string') return '/';
+    const trimmed = url.trim();
+    // Bắt buộc là relative URL hợp lệ: bắt đầu bằng 1 dấu '/', không phải '//', không chứa ':', không chứa '\'
+    if (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.includes(':') && !trimmed.includes('\\')) {
+        return trimmed;
+    }
+    return '/';
+}
+
+function sanitizeText(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.replace(/<[^>]*>?/gm, '').trim();
+}
+
 // Middleware bắt buộc đăng nhập (Dùng cho các chức năng nhạy cảm như Đặt vé, Xem profile)
 function requireAuth(req, res, next) {
     if (!req.session || !req.session.user) {
-        const returnUrl = encodeURIComponent(req.originalUrl || '/');
+        const returnUrl = encodeURIComponent(sanitizeReturnUrl(req.originalUrl || '/'));
         const errorMsg = encodeURIComponent('Vui lòng đăng nhập tài khoản để tiếp tục đặt vé và chọn ghế.');
         return res.redirect(`/login?returnUrl=${returnUrl}&error=${errorMsg}`);
     }
@@ -62,7 +80,7 @@ function getLoginPage(req, res) {
         title: 'Đăng Nhập - CINESTAR K23',
         error: req.query.error || null,
         success: req.query.success || null,
-        returnUrl: req.query.returnUrl || '/'
+        returnUrl: sanitizeReturnUrl(req.query.returnUrl)
     });
 }
 
@@ -204,16 +222,17 @@ async function postLogin(req, res) {
         if (user.role === 'ADMIN') {
             return res.redirect('/admin');
         } else {
-            return res.redirect(returnUrl && returnUrl !== '/login' ? returnUrl : '/');
+            const safeRedirect = sanitizeReturnUrl(returnUrl);
+            return res.redirect(safeRedirect !== '/login' ? safeRedirect : '/');
         }
 
     } catch (err) {
         console.error('[AUTH ERROR] Lỗi đăng nhập:', err);
         return res.render('login', {
             title: 'Đăng Nhập - CINESTAR K23',
-            error: 'Lỗi hệ thống trong quá trình xác thực: ' + err.message,
+            error: 'Đã xảy ra lỗi trong quá trình xác thực. Vui lòng thử lại sau.',
             success: null,
-            returnUrl
+            returnUrl: sanitizeReturnUrl(returnUrl)
         });
     }
 }
@@ -255,10 +274,22 @@ async function postRegister(req, res) {
     }
 
     try {
+        const cleanFullname = sanitizeText(fullname);
+        const cleanPhone = sanitizeText(phone);
+        const cleanEmail = sanitizeText(email).toLowerCase();
+
+        const phoneRegex = /^(03|05|07|08|09)\d{8}$/;
+        if (!phoneRegex.test(cleanPhone)) {
+            return res.render('register', {
+                title: 'Đăng Ký Thành Viên - CINESTAR K23',
+                error: 'Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại di động Việt Nam gồm 10 chữ số.'
+            });
+        }
+
         // Kiểm tra trùng Email hoặc Số điện thoại
         const existing = await db.query(
             'SELECT id, email, phone FROM users WHERE email = ? OR phone = ? LIMIT 1',
-            [email.trim(), phone.trim()]
+            [cleanEmail, cleanPhone]
         );
 
         if (existing && existing.length > 0) {
@@ -268,17 +299,17 @@ async function postRegister(req, res) {
             });
         }
 
-        // Băm mật khẩu
+        // Băm mật khẩu (Bcrypt an toàn)
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
         // Lưu vào CSDL
         await db.query(
             'INSERT INTO users (fullname, phone, email, password_hash, role, status) VALUES (?, ?, ?, ?, ?, ?)',
-            [fullname.trim(), phone.trim(), email.trim(), passwordHash, 'USER', 'ACTIVE']
+            [cleanFullname, cleanPhone, cleanEmail, passwordHash, 'USER', 'ACTIVE']
         );
 
-        console.log(`[REGISTER_SUCCESS] Tạo tài khoản mới: ${email.trim()} (${fullname.trim()})`);
+        console.log(`[REGISTER_SUCCESS] Tạo tài khoản mới: ${cleanEmail} (${cleanFullname})`);
 
         return res.redirect('/login?success=' + encodeURIComponent('Đăng ký tài khoản thành công! Vui lòng đăng nhập.'));
 
@@ -286,7 +317,7 @@ async function postRegister(req, res) {
         console.error('[AUTH ERROR] Lỗi đăng ký:', err);
         return res.render('register', {
             title: 'Đăng Ký Thành Viên - CINESTAR K23',
-            error: 'Lỗi đăng ký tài khoản: ' + err.message
+            error: 'Đã xảy ra lỗi trong quá trình tạo tài khoản. Vui lòng thử lại sau.'
         });
     }
 }
@@ -322,11 +353,13 @@ async function getProfilePage(req, res) {
         });
     } catch (err) {
         console.error('[AUTH PROFILE ERROR]', err);
-        res.status(500).render('error', { title: 'Lỗi Tải Hồ Sơ', message: err.message });
+        res.status(500).render('error', { title: 'Lỗi Tải Hồ Sơ', message: 'Không thể tải thông tin hồ sơ lúc này.' });
     }
 }
 
 module.exports = {
+    sanitizeReturnUrl,
+    sanitizeText,
     requireAuth,
     getLoginPage,
     postLogin,

@@ -63,8 +63,8 @@ router.get('/health', async (req, res) => {
     });
 });
 
-// Endpoint giả lập lỗi Exception / HTTP 500 để kiểm thử câu truy vấn LogQL ở Bước 5
-router.get('/trigger-error', (req, res) => {
+// Endpoint giả lập lỗi Exception / HTTP 500 để kiểm thử câu truy vấn LogQL (Bảo vệ: Chỉ Admin mới được kích hoạt)
+router.get('/trigger-error', adminController.requireAdmin, (req, res) => {
     console.error('[ERROR] Simulated Exception: Database transaction Failed during seat reservation!');
     throw new Error('Simulated Uncaught Exception for testing Loki LogQL');
 });
