@@ -42,23 +42,31 @@ router.post('/admin/users/:id/toggle-role', adminController.requireAdmin, adminC
 // Endpoint xuất Metrics cho Prometheus
 router.get('/metrics', getMetrics);
 
-// Healthcheck endpoint cho Docker & Nginx
+// Healthcheck endpoint cho Docker & Nginx (Bước 1 & 2)
 router.get('/health', async (req, res) => {
     let dbStatus = 'DISCONNECTED';
+    const isRealDb = db.isDbConnected();
     try {
         await db.query('SELECT 1');
-        dbStatus = 'CONNECTED';
+        dbStatus = isRealDb ? 'CONNECTED (MySQL 8.0)' : 'FALLBACK_MODE (In-Memory)';
     } catch (e) {
         dbStatus = 'ERROR: ' + e.message;
     }
     res.json({
         status: 'UP',
-        service: 'ticket-booking-app',
+        service: 'webapp',
         student: 'Nguyen Tuan Dat - DTC245200452',
         database: dbStatus,
-        uptime: process.uptime(),
+        is_connected_real_mysql: isRealDb,
+        uptime: Math.floor(process.uptime()),
         timestamp: new Date().toISOString()
     });
+});
+
+// Endpoint giả lập lỗi Exception / HTTP 500 để kiểm thử câu truy vấn LogQL ở Bước 5
+router.get('/trigger-error', (req, res) => {
+    console.error('[ERROR] Simulated Exception: Database transaction Failed during seat reservation!');
+    throw new Error('Simulated Uncaught Exception for testing Loki LogQL');
 });
 
 module.exports = router;

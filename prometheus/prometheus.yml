@@ -1,40 +1,35 @@
 # ========================================================
-# CẤU HÌNH PROMETHEUS SCRAPER - NGÀY 2
-# ĐỀ TÀI 11: HỆ THỐNG ĐẶT VÉ PHIM & SỰ KIỆN - K23 ICTU
+# CẤU HÌNH PROMETHEUS SCRAPER - BƯỚC 4 -> BƯỚC 6
+# HỌC PHẦN: TRIỂN KHAI VÀ QUẢN TRỊ HỆ THỐNG PHẦN MỀM - K23
 # SINH VIÊN: NGUYỄN TUẤN ĐẠT - MSV: DTC245200452
 # ========================================================
 
 global:
-  scrape_interval: 10s       # Cào dữ liệu mỗi 10 giây
+  scrape_interval: 10s       # Cào dữ liệu định kỳ mỗi 10 giây
   evaluation_interval: 10s   # Đánh giá cảnh báo mỗi 10 giây
   scrape_timeout: 5s
 
 scrape_configs:
-  # 1. Giám sát chính Prometheus
+  # 1. Tự giám sát chính Prometheus Server
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
-  # 2. Giám sát toàn bộ Docker Container qua cAdvisor (CPU, Memory, Network)
+  # 2. Giám sát tài nguyên toàn bộ Docker Containers qua cAdvisor
   - job_name: 'cadvisor'
     static_configs:
       - targets: ['cadvisor:8080']
 
   # 3. Giám sát Ứng dụng Web Đặt vé (Node.js Express + prom-client)
-  - job_name: 'ticket-booking-app'
+  - job_name: 'webapp'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['app:3000']
+      - targets: ['webapp:3000']
     relabel_configs:
       - target_label: application
         replacement: cinema-ticket-system
 
-  # 4. Giám sát Cơ sở dữ liệu MySQL 8.0 qua mysqld-exporter
-  - job_name: 'mysql-database'
-    static_configs:
-      - targets: ['mysqld-exporter:9104']
-
-  # 5. Giám sát Nginx Web Server qua nginx-prometheus-exporter
-  - job_name: 'nginx-reverse-proxy'
+  # 4. Giám sát Nginx Web Server qua Nginx Exporter
+  - job_name: 'nginx'
     static_configs:
       - targets: ['nginx-exporter:9113']

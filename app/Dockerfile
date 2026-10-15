@@ -20,11 +20,15 @@ RUN npm ci --only=production
 # Bước 3: Copy toàn bộ source code
 COPY . .
 
-# HARDENING BẢO MẬT: Chuyển quyền sở hữu cho user không đặc quyền 'node'
-RUN chown -R node:node /usr/src/app
+# HARDENING BẢO MẬT: Tạo group và user không đặc quyền 'appuser' (non-root UID 1001)
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
 
-# Chạy container dưới quyền user 'node' (non-root)
-USER node
+# Phân quyền thư mục làm việc cho appuser
+RUN chown -R appuser:appgroup /usr/src/app
+
+# Chạy container dưới quyền user 'appuser' (non-root)
+USER appuser
 
 # Khai báo cổng ứng dụng
 EXPOSE 3000

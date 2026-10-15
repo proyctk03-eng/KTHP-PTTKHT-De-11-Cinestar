@@ -3,8 +3,10 @@ const path = require('path');
 const dotenv = require('dotenv');
 const session = require('express-session');
 
-// Nạp file cấu hình môi trường .env
+// Nạp file cấu hình môi trường .env linh hoạt
+dotenv.config();
 dotenv.config({ path: path.join(__dirname, '../../.env') });
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const { metricsMiddleware } = require('./controllers/metricsController');
 const webRoutes = require('./routes/webRoutes');

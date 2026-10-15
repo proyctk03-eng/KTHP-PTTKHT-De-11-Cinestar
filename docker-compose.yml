@@ -1,32 +1,37 @@
 # ========================================================
-# DOCKER COMPOSE ORCHESTRATION - DAY 2 (FULL STACK)
-# ĐỀ TÀI 11: HỆ THỐNG ĐẶT VÉ XEM PHIM & SỰ KIỆN TRỰC TUYẾN
+# DOCKER COMPOSE - BƯỚC 6 (COMMIT 4): SECURITY HARDENING
+# ĐỀ TÀI: HỆ THỐNG ĐẶT VÉ XEM PHIM & SỰ KIỆN TRỰC TUYẾN
 # SINH VIÊN: NGUYỄN TUẤN ĐẠT - MSV: DTC245200452
-# MÔN HỌC: TRIỂN KHAI & QUẢN TRỊ HỆ THỐNG PHẦN MỀM K23 - ICTU
+# HỌC PHẦN: TRIỂN KHAI VÀ QUẢN TRỊ HỆ THỐNG PHẦN MỀM K23 - ICTU
 # ========================================================
 
 services:
   # ========================================================
-  # 1. APPLICATION & REVERSE PROXY STACK (NGÀY 1)
+  # 1. APPLICATION & REVERSE PROXY STACK (BƯỚC 1 -> BƯỚC 3)
   # ========================================================
 
-  # 1.1 Web Application (Node.js + Express Full-stack)
-  app:
+  # 1.1 Web Application (Node.js/Express)
+  webapp:
     build:
       context: ./app
       dockerfile: Dockerfile
-    container_name: ticket_app
+    container_name: ticket_webapp
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - .env
     environment:
-      - PORT=3000
-      - NODE_ENV=production
-      - DB_HOST=mysql
-      - DB_PORT=3306
+      - PORT=${PORT:-3000}
+      - NODE_ENV=${NODE_ENV:-production}
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-3306}
       - DB_USER=${DB_USER:-ticket_user}
-      - DB_PASSWORD=${DB_PASSWORD:-TicketSecurePass2024!}
+      - DB_PASSWORD=${DB_PASSWORD:?Vui lòng cấu hình DB_PASSWORD trong .env}
       - DB_NAME=${DB_NAME:-ticket_db}
+      - SESSION_SECRET=${SESSION_SECRET:?Vui lòng cấu hình SESSION_SECRET trong .env}
     depends_on:
-      mysql:
+      db:
         condition: service_healthy
     networks:
       - frontend_net
@@ -38,71 +43,82 @@ services:
           cpus: '0.50'
           memory: 350M
 
-  # 1.2 Database Server (MySQL 8.0)
-  mysql:
+  # 1.2 Cơ sở dữ liệu MySQL 8.0 (Cô lập trong backend_net)
+  db:
     image: mysql:8.0
-    container_name: ticket_mysql
+    container_name: ticket_db
     restart: unless-stopped
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    security_opt:
+      - no-new-privileges:true
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-RootSecurePass2024!}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?Vui lòng cấu hình MYSQL_ROOT_PASSWORD trong .env}
       - MYSQL_DATABASE=${DB_NAME:-ticket_db}
       - MYSQL_USER=${DB_USER:-ticket_user}
-      - MYSQL_PASSWORD=${DB_PASSWORD:-TicketSecurePass2024!}
+      - MYSQL_PASSWORD=${DB_PASSWORD:?Vui lòng cấu hình DB_PASSWORD trong .env}
+    ports:
+      - "127.0.0.1:${DB_PORT_HOST:-3306}:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - db_data:/var/lib/mysql
       - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-RootSecurePass2024!}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:?Vui lòng cấu hình MYSQL_ROOT_PASSWORD trong .env}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
     networks:
       - backend_net
-      - monitoring_net
     deploy:
       resources:
         limits:
           cpus: '0.75'
           memory: 512M
 
-  # 1.3 phpMyAdmin Database Web GUI
-  phpmyadmin:
+  # 1.3 Công cụ quản trị CSDL trực quan (phpMyAdmin)
+  db-admin:
     image: phpmyadmin:latest
-    container_name: ticket_phpmyadmin
+    container_name: ticket_db_admin
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
-      - PMA_HOST=mysql
+      - PMA_HOST=db
       - PMA_PORT=3306
       - UPLOAD_LIMIT=64M
     ports:
-      - "${PMA_PORT:-8080}:80"
+      - "127.0.0.1:${PMA_PORT:-8080}:80"
     depends_on:
-      mysql:
+      db:
         condition: service_healthy
     networks:
-      - frontend_net
       - backend_net
+      - frontend_net
     deploy:
       resources:
         limits:
           cpus: '0.25'
           memory: 256M
 
-  # 1.4 Nginx Reverse Proxy (SSL HTTPS & Security Headers)
+  # 1.4 Nginx Reverse Proxy (SSL & Security Headers)
   nginx:
     image: nginx:alpine
     container_name: ticket_nginx
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - nginx_logs:/var/log/nginx
     depends_on:
-      - app
+      - webapp
     networks:
       - frontend_net
       - monitoring_net
@@ -113,7 +129,7 @@ services:
           memory: 128M
 
   # ========================================================
-  # 2. GIÁM SÁT TOÀN DIỆN (PROMETHEUS & GRAFANA STACK)
+  # 2. METRICS MONITORING STACK (BƯỚC 4)
   # ========================================================
 
   # 2.1 Prometheus Server
@@ -121,6 +137,8 @@ services:
     image: prom/prometheus:v2.51.0
     container_name: ticket_prometheus
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -128,12 +146,11 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     ports:
-      - "9090:9090"
+      - "${PROMETHEUS_PORT:-9090}:9090"
     networks:
-      - frontend_net
       - monitoring_net
     deploy:
       resources:
@@ -141,35 +158,7 @@ services:
           cpus: '0.50'
           memory: 384M
 
-  # 2.2 Grafana Analytics & Dashboards
-  grafana:
-    image: grafana/grafana:10.4.0
-    container_name: ticket_grafana
-    restart: unless-stopped
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=Admin@123456
-      - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
-      - grafana_data:/var/lib/grafana
-    ports:
-      - "3001:3000"
-    networks:
-      - frontend_net
-      - monitoring_net
-    depends_on:
-      - prometheus
-      - loki
-    deploy:
-      resources:
-        limits:
-          cpus: '0.50'
-          memory: 384M
-
-  # 2.3 cAdvisor (Giám sát CPU, RAM, Network toàn bộ Container)
+  # 2.2 cAdvisor (Giám sát tài nguyên container)
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: ticket_cadvisor
@@ -189,30 +178,13 @@ services:
           cpus: '0.35'
           memory: 256M
 
-  # 2.4 MySQL Exporter (Cào thông số truy vấn, kết nối MySQL)
-  mysqld-exporter:
-    image: prom/mysqld-exporter:v0.15.1
-    container_name: ticket_mysqld_exporter
-    restart: unless-stopped
-    environment:
-      - DATA_SOURCE_NAME=root:${MYSQL_ROOT_PASSWORD:-RootSecurePass2024!}@(mysql:3306)/
-    networks:
-      - backend_net
-      - monitoring_net
-    depends_on:
-      mysql:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: '0.20'
-          memory: 128M
-
-  # 2.5 Nginx Prometheus Exporter (Cào số lượt kết nối Nginx)
+  # 2.3 Nginx Prometheus Exporter (Cào số lượt kết nối Nginx)
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:1.1.0
     container_name: ticket_nginx_exporter
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     command:
       - -nginx.scrape-uri=http://nginx:80/stub_status
     networks:
@@ -226,8 +198,37 @@ services:
           cpus: '0.20'
           memory: 128M
 
+  # 2.4 Grafana Analytics & Dashboards
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: ticket_grafana
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?Vui lòng cấu hình GRAFANA_ADMIN_PASSWORD trong .env}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    networks:
+      - monitoring_net
+    depends_on:
+      - prometheus
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 384M
+
   # ========================================================
-  # 3. QUẢN LÝ LOG TẬP TRUNG (LOKI + PROMTAIL STACK)
+  # 3. CENTRALIZED LOGGING STACK: LOKI + PROMTAIL (BƯỚC 5)
   # ========================================================
 
   # 3.1 Loki Log Aggregation Server
@@ -235,9 +236,11 @@ services:
     image: grafana/loki:3.0.0
     container_name: ticket_loki
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
-      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ./monitoring/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
       - loki_data:/loki
     ports:
       - "3100:3100"
@@ -249,16 +252,19 @@ services:
           cpus: '0.40'
           memory: 384M
 
-  # 3.2 Promtail Log Collector
+  # 3.2 Promtail Log Shipper / Collector
   promtail:
     image: grafana/promtail:3.0.0
     container_name: ticket_promtail
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     command: -config.file=/etc/promtail/config.yml
     volumes:
-      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./monitoring/promtail/promtail-config.yaml:/etc/promtail/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - nginx_logs:/var/log/nginx:ro
     networks:
       - monitoring_net
     depends_on:
@@ -267,24 +273,13 @@ services:
       resources:
         limits:
           cpus: '0.25'
-          memory: 192M
+          memory: 150M
 
 # ========================================================
-# NETWORK ISOLATION & ARCHITECTURE
-# ========================================================
-networks:
-  frontend_net:
-    driver: bridge
-  backend_net:
-    driver: bridge
-  monitoring_net:
-    driver: bridge
-
-# ========================================================
-# PERSISTENT VOLUMES
+# LƯU TRỮ BỀN VỮNG (PERSISTENT VOLUMES)
 # ========================================================
 volumes:
-  mysql_data:
+  db_data:
     driver: local
   prometheus_data:
     driver: local
@@ -292,3 +287,17 @@ volumes:
     driver: local
   loki_data:
     driver: local
+  nginx_logs:
+    driver: local
+
+# ========================================================
+# PHÂN TÁCH MẠNG NỘI BỘ (MULTI-TIER NETWORK SEGMENTATION)
+# ========================================================
+networks:
+  frontend_net:
+    driver: bridge
+  backend_net:
+    driver: bridge
+    internal: true   # Cô lập hoàn toàn cơ sở dữ liệu khỏi Internet
+  monitoring_net:
+    driver: bridge

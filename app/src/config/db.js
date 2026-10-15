@@ -1,6 +1,8 @@
 const mysql = require('mysql2/promise');
 const path = require('path');
+require('dotenv').config();
 require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 const dbConfig = {
     host: process.env.DB_HOST || '127.0.0.1',

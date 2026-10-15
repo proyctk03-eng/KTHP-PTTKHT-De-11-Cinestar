@@ -6,6 +6,39 @@ const db = require('../config/db');
 // API Đặt vé và thanh toán
 router.post('/bookings', bookingController.processBooking);
 
+// API Kiểm tra kết nối trực tiếp giữa Web App và Database (Bước 1 & 2)
+router.get('/db-test', async (req, res) => {
+    try {
+        const rows = await db.query('SELECT 1 AS connection_status, VERSION() AS mysql_version, DATABASE() AS database_name, NOW() AS server_time');
+        console.log(`[DATABASE] ✅ [SUCCESS] Kiểm tra kết nối DB thành công từ Web App [Host: ${process.env.DB_HOST || 'db'}]`);
+        res.json({
+            success: true,
+            message: 'Kết nối giữa Web App và Database MySQL thành công 100%!',
+            database_info: {
+                host: process.env.DB_HOST || 'db',
+                port: parseInt(process.env.DB_PORT || '3306', 10),
+                database: process.env.DB_NAME || 'ticket_db',
+                user: process.env.DB_USER || 'ticket_user',
+                is_connected_real_db: db.isDbConnected(),
+                is_fallback_mode: db.isFallback()
+            },
+            test_query_result: rows[0] || rows
+        });
+    } catch (err) {
+        console.error(`[DATABASE] ❌ [ERROR] Lỗi kiểm tra kết nối DB: ${err.message}`);
+        res.status(500).json({
+            success: false,
+            message: 'Không thể kết nối đến cơ sở dữ liệu!',
+            error: err.message,
+            database_info: {
+                host: process.env.DB_HOST || 'db',
+                port: process.env.DB_PORT || '3306',
+                database: process.env.DB_NAME || 'ticket_db'
+            }
+        });
+    }
+});
+
 // API Lấy danh sách phim JSON
 router.get('/movies', async (req, res) => {
     try {

@@ -1,22 +1,48 @@
-# Dependencies
+# ========================================================
+# GIT IGNORE - BẢO MẬT & CHẶN RÒ RỈ DỮ LIỆU NHẠY CẢM
+# HỌC PHẦN: TRIỂN KHAI VÀ QUẢN TRỊ HỆ THỐNG PHẦN MỀM K23 - ICTU
+# ========================================================
+
+# 1. Thư viện phụ thuộc (Dependencies)
 app/node_modules/
 node_modules/
-
-# Environment variables
-.env
-
-# Logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# OS specific files
+# 2. Biến môi trường nhạy cảm (CHẶN TUYỆT ĐỐI)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# 3. Chứng chỉ số & Khóa bảo mật SSL/TLS Private Keys (CHẶN TUYỆT ĐỐI)
+*.key
+*.pem
+*.crt
+*.csr
+*.p12
+*.pfx
+nginx/certs/*
+!nginx/certs/.gitkeep
+nginx/ssl/*
+certs/
+ssl/
+
+# 4. Logs hệ thống
+*.log
+logs/
+
+# 5. Dữ liệu tạm của hệ điều hành & Office
 .DS_Store
 Thumbs.db
 desktop.ini
+~$*
+*.tmp
 
-# IDE files
+# 6. Cấu hình IDE / Trình soạn thảo
 .vscode/
 .idea/
 *.suo
