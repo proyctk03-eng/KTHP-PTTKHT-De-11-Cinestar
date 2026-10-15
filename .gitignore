@@ -48,3 +48,9 @@ desktop.ini
 *.suo
 *.ntvs*
 *.njsproj
+
+# 7. File tài liệu báo cáo & Slide (Lưu ở máy cục bộ, chỉ giữ file web trên Git)
+*.docx
+*.pptx
+*.pdf
+generate_*.py

@@ -15,39 +15,39 @@ Toàn bộ hệ sinh thái được đóng gói và tự động hóa 100% thôn
 ### 📐 Sơ Đồ Kiến Trúc Luồng Dữ Liệu & Mạng Nội Bộ (System Architecture)
 
 ```mermaid
-graph TD
+flowchart TD
     Client["Client / Giảng viên (Web Browser)"]
     
     subgraph Ingress ["TẦNG CỔNG VÀO & BẢO MẬT (INGRESS LAYER)"]
-        Client -->|Port 80 HTTP (Redirect 301)| Nginx["Nginx Reverse Proxy\n- SSL Termination (Port 443)\n- OWASP Security Headers\n- Rate Limiting & Gzip\n- Ẩn phiên bản (server_tokens off)"]
-        Client -->|Port 443 HTTPS (TLS 1.2/1.3)| Nginx
+        Client -->|"Port 80 HTTP (Redirect 301)"| Nginx["Nginx Reverse Proxy<br/>• SSL Termination (Port 443)<br/>• OWASP Security Headers<br/>• Rate Limiting & Gzip<br/>• Ẩn phiên bản (server_tokens off)"]
+        Client -->|"Port 443 HTTPS (TLS 1.2/1.3)"| Nginx
     end
 
     subgraph frontend_net ["MẠNG FRONTEND (frontend_net - Bridge)"]
-        Nginx -->|Reverse Proxy /| WebApp["Web Application (Node.js 20)\n- Non-root user: appuser (UID 1001)\n- Đặt vé thời gian thực (ACID)\n- Endpoint Metrics: /metrics\n- Endpoint Test: /trigger-error"]
-        Nginx -.->|Reverse Proxy /pma/| PMA["phpMyAdmin (Quản trị CSDL)"]
+        Nginx -->|"Reverse Proxy /"| WebApp["Web Application (Node.js 20)<br/>• Non-root user: appuser (UID 1001)<br/>• Đặt vé thời gian thực (ACID)<br/>• Endpoint Metrics: /metrics<br/>• Endpoint Test: /trigger-error"]
+        Nginx -.->|"Reverse Proxy /pma/"| PMA["phpMyAdmin (Quản trị CSDL)"]
     end
 
     subgraph backend_net ["MẠNG BACKEND CÔ LẬP (backend_net - internal: true)"]
-        WebApp -->|MySQL Port 3306| DB[("MySQL 8.0 Database\n- Chuẩn hóa 3NF / InnoDB\n- Khóa dòng FOR UPDATE\n- Tự động nạp init.sql\n- Persistent Volume db_data")]
-        PMA -->|Truy vấn nội bộ| DB
+        WebApp -->|"MySQL Port 3306"| DB[("MySQL 8.0 Database<br/>• Chuẩn hóa 3NF / InnoDB<br/>• Khóa dòng FOR UPDATE<br/>• Tự động nạp init.sql<br/>• Persistent Volume db_data")]
+        PMA -->|"Truy vấn nội bộ"| DB
     end
 
     subgraph monitoring_net ["MẠNG GIÁM SÁT & NHẬT KÝ (monitoring_net - Bridge)"]
-        Prometheus["Prometheus Server (Port 9090)\n- Scrape Interval: 10s\n- Lưu trữ TSDB bền vững"]
-        Prometheus -->|Scrape metrics| WebApp
-        Prometheus -->|Scrape metrics| NginxExp["Nginx Exporter (Port 9113)"]
-        Prometheus -->|Scrape metrics| Cadvisor["cAdvisor (Giám sát tài nguyên container)"]
-        NginxExp -->|/stub_status| Nginx
+        Prometheus["Prometheus Server (Port 9090)<br/>• Scrape Interval: 10s<br/>• Lưu trữ TSDB bền vững"]
+        Prometheus -->|"Scrape metrics"| WebApp
+        Prometheus -->|"Scrape metrics"| NginxExp["Nginx Exporter (Port 9113)"]
+        Prometheus -->|"Scrape metrics"| Cadvisor["cAdvisor (Giám sát tài nguyên container)"]
+        NginxExp -->|"/stub_status"| Nginx
         
-        Promtail["Promtail Log Collector\n- Mount docker.sock\n- Mount nginx_logs\n- Relabel: job=nginx, job=webapp"] -->|Đẩy log qua HTTP 3100| Loki["Loki Log Engine (Port 3100)\n- Chỉ mục hóa labels\n- Lưu trữ chunks filesystem"]
+        Promtail["Promtail Log Collector<br/>• Mount docker.sock<br/>• Mount nginx_logs<br/>• Relabel: job=nginx, job=webapp"] -->|"Đẩy log qua HTTP 3100"| Loki["Loki Log Engine (Port 3100)<br/>• Chỉ mục hóa labels<br/>• Lưu trữ chunks filesystem"]
         
-        Grafana["Grafana Analytics (Port 3001)\n- Tự động nạp Dashboard Cinema\n- Tự động kết nối Prometheus & Loki\n- Giao diện Explore truy vấn LogQL"]
-        Grafana -->|Truy vấn Metrics| Prometheus
-        Grafana -->|Truy vấn LogQL| Loki
+        Grafana["Grafana Analytics (Port 3001)<br/>• Tự động nạp Dashboard Cinema<br/>• Tự động kết nối Prometheus & Loki<br/>• Giao diện Explore truy vấn LogQL"]
+        Grafana -->|"Truy vấn Metrics"| Prometheus
+        Grafana -->|"Truy vấn LogQL"| Loki
         
-        Client -->|Truy cập Dashboard 3001| Grafana
-        Client -->|Truy cập Prometheus UI 9090| Prometheus
+        Client -->|"Truy cập Dashboard 3001"| Grafana
+        Client -->|"Truy cập Prometheus UI 9090"| Prometheus
     end
 ```
 
