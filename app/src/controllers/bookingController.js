@@ -238,7 +238,7 @@ async function getHistoryPage(req, res) {
     }
 
     res.render('history', {
-        title: 'Tra Cứu Vé Đã Đặt - Galaxy Cinema',
+        title: 'Tra Cứu Vé Đã Đặt - CINESTAR K23',
         tickets,
         searchKey
     });

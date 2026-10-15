@@ -13,7 +13,7 @@ async function getHomePage(req, res) {
         const categories = await db.query(`SELECT * FROM categories ORDER BY name ASC`);
         
         res.render('index', {
-            title: 'Hệ Thống Đặt Vé Phim & Sự Kiện - Galaxy Cinema',
+            title: 'Hệ Thống Đặt Vé Phim & Sự Kiện - CINESTAR K23',
             movies,
             categories,
             activeTab: req.query.type || 'ALL'

@@ -95,10 +95,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Kiểm tra định dạng số điện thoại Việt Nam hợp lệ (10 chữ số)
+            const phoneRegex = /^(03|05|07|08|09)\d{8}$/;
+            if (!phoneRegex.test(phone)) {
+                alert('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại di động Việt Nam 10 chữ số (ví dụ: 0987654321).');
+                return;
+            }
+
             // Hiển thị trạng thái đang xử lý
             const originalBtnText = bookBtn.innerHTML;
             bookBtn.disabled = true;
             bookBtn.innerHTML = '⏳ Đang xác nhận thanh toán...';
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
             try {
                 const response = await fetch('/api/bookings', {
@@ -111,8 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         customer_email: email,
                         seat_ids: selectedSeats.map(s => s.id),
                         payment_method: selectedPayment
-                    })
+                    }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
 
                 const data = await response.json();
 
@@ -136,8 +148,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } catch (err) {
+                clearTimeout(timeoutId);
                 console.error('Lỗi kết nối đặt vé:', err);
-                alert('Không thể kết nối đến máy chủ thanh toán. Vui lòng thử lại!');
+                if (err.name === 'AbortError') {
+                    alert('Thời gian xử lý giao dịch quá 15 giây (Timeout). Vui lòng kiểm tra lại kết nối mạng của bạn!');
+                } else {
+                    alert('Không thể kết nối đến máy chủ thanh toán. Vui lòng thử lại!');
+                }
                 bookBtn.disabled = false;
                 bookBtn.innerHTML = originalBtnText;
             }

@@ -233,8 +233,9 @@ function handleFallbackQuery(sql, params = []) {
     }
 
     // 5. Suất chiếu
-    if (s.includes('FROM SHOWTIMES S')) {
-        if (s.includes('WHERE S.MOVIE_ID = ?')) {
+    // 5. Suất chiếu (Hỗ trợ cả cú pháp có alias S hoặc không alias)
+    if (s.includes('FROM SHOWTIMES')) {
+        if (s.includes('MOVIE_ID = ?')) {
             const mId = parseInt(params[0], 10);
             const filtered = mockData.showtimes.filter(x => x.movie_id === mId);
             return filtered.map(st => {
@@ -249,7 +250,7 @@ function handleFallbackQuery(sql, params = []) {
                 };
             });
         }
-        if (s.includes('WHERE S.ID = ?')) {
+        if (s.includes('WHERE S.ID = ?') || s.includes('WHERE ID = ?') || s.includes('S.ID = ?') || s.includes('WHERE ID=')) {
             const stId = parseInt(params[0], 10);
             const st = mockData.showtimes.find(x => x.id === stId);
             if (!st) return [];
@@ -257,15 +258,15 @@ function handleFallbackQuery(sql, params = []) {
             const room = mockData.rooms.find(r => r.id === st.room_id) || {};
             return [{
                 ...st,
-                movie_id: movie.id,
-                movie_title: movie.title,
-                poster_url: movie.poster_url,
-                base_price: movie.base_price,
-                rating: movie.rating,
-                room_name: room.name,
-                room_type: room.room_type,
+                movie_id: movie.id || st.movie_id,
+                movie_title: movie.title || '',
+                poster_url: movie.poster_url || '',
+                base_price: movie.base_price || st.base_price,
+                rating: movie.rating || 'P',
+                room_name: room.name || 'Phòng chiếu',
+                room_type: room.room_type || '2D Digital',
                 formatted_date: st.show_date,
-                formatted_start: st.start_time.substring(0, 5)
+                formatted_start: st.start_time ? st.start_time.substring(0, 5) : '19:30'
             }];
         }
     }
@@ -283,7 +284,7 @@ function handleFallbackQuery(sql, params = []) {
     }
 
     // 8. Đặt vé: Tra cứu vé theo mã vé
-    if (s.includes('FROM BOOKINGS B') && s.includes('WHERE B.BOOKING_CODE = ?')) {
+    if (s.includes('FROM BOOKINGS') && s.includes('BOOKING_CODE = ?')) {
         const code = params[0];
         const b = mockData.bookings.find(x => x.booking_code === code);
         if (!b) return [];
@@ -306,7 +307,7 @@ function handleFallbackQuery(sql, params = []) {
     }
 
     // 9. Lịch sử vé theo SĐT hoặc mã
-    if (s.includes('FROM BOOKINGS B') && s.includes('CUSTOMER_PHONE LIKE ?')) {
+    if (s.includes('FROM BOOKINGS') && s.includes('CUSTOMER_PHONE LIKE ?')) {
         const key = params[0].replace(/%/g, '');
         const filtered = mockData.bookings.filter(b => b.customer_phone.includes(key) || b.booking_code.includes(key));
         return filtered.map(b => {
@@ -327,7 +328,7 @@ function handleFallbackQuery(sql, params = []) {
     }
 
     // 10. Ghế của 1 booking
-    if (s.includes('FROM BOOKING_DETAILS BD') && s.includes('WHERE BD.BOOKING_ID = ?')) {
+    if (s.includes('FROM BOOKING_DETAILS') && s.includes('BOOKING_ID = ?')) {
         const bId = parseInt(params[0], 10);
         return mockData.booking_details.filter(d => d.booking_id === bId).map(d => {
             const sObj = mockData.seats.find(x => x.id === d.seat_id) || {};
